@@ -25,9 +25,14 @@ export function LogoConTexto() {
   return (
     <div className="flex items-center gap-2">
       <Logo />
-      <div className="leading-tight">
-        <p className="text-sm font-semibold text-foreground">Nueva Alianza SLP</p>
-        <p className="text-xs text-muted-foreground">Captura Electoral</p>
+      {/* En celular no hay suficiente ancho junto al menú de usuario para
+          el nombre completo sin que se parta palabra por palabra — el
+          logo ya comunica la marca por sí solo ahí. */}
+      <div className="hidden leading-tight sm:block">
+        <p className="whitespace-nowrap text-sm font-semibold text-foreground">
+          Nueva Alianza SLP
+        </p>
+        <p className="whitespace-nowrap text-xs text-muted-foreground">Captura Electoral</p>
       </div>
     </div>
   );

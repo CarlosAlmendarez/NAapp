@@ -2,7 +2,11 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
 /**
- * Limitador de intentos: 5 intentos / 15 minutos por clave (IP + correo).
+ * Limitador de intentos de login: 5 intentos **fallidos** / 15 minutos por
+ * clave (IP + correo). Se cuentan solo los fallidos a propósito — un
+ * usuario que entra y sale de sesión varias veces seguidas con su
+ * contraseña correcta no debe quedar bloqueado por eso.
+ *
  * Usa Upstash Redis en producción (compartido entre todas las instancias
  * serverless de Vercel). Si las variables de Upstash no están configuradas
  * (ej. en desarrollo local), cae a un limitador en memoria de un solo
@@ -33,33 +37,44 @@ const memoryBuckets = new Map<string, Bucket>();
 const MEMORY_LIMIT = 5;
 const MEMORY_WINDOW_MS = 15 * 60 * 1000;
 
-function memoryCheck(key: string): { success: boolean; remaining: number } {
+function memoryPeek(key: string): boolean {
+  const bucket = memoryBuckets.get(key);
+  if (!bucket || bucket.resetAt < Date.now()) return true;
+  return bucket.count < MEMORY_LIMIT;
+}
+
+function memoryRegistrarFallo(key: string): void {
   const now = Date.now();
   const bucket = memoryBuckets.get(key);
   if (!bucket || bucket.resetAt < now) {
     memoryBuckets.set(key, { count: 1, resetAt: now + MEMORY_WINDOW_MS });
-    return { success: true, remaining: MEMORY_LIMIT - 1 };
-  }
-  if (bucket.count >= MEMORY_LIMIT) {
-    return { success: false, remaining: 0 };
+    return;
   }
   bucket.count += 1;
-  return { success: true, remaining: MEMORY_LIMIT - bucket.count };
 }
 
-export type RateLimitResult = {
-  success: boolean;
-  remaining: number;
-  usingFallback: boolean;
-};
-
-export async function checkLoginRateLimit(key: string): Promise<RateLimitResult> {
+/**
+ * Solo consulta si la clave ya está bloqueada — no cuenta como un intento.
+ * Se usa antes de verificar la contraseña.
+ */
+export async function bloqueadoPorIntentos(key: string): Promise<boolean> {
   if (upstashLimiter) {
-    const { success, remaining } = await upstashLimiter.limit(key);
-    return { success, remaining, usingFallback: false };
+    const { remaining } = await upstashLimiter.getRemaining(key);
+    return remaining <= 0;
   }
-  const result = memoryCheck(key);
-  return { ...result, usingFallback: true };
+  return !memoryPeek(key);
+}
+
+/**
+ * Registra un intento fallido (contraseña incorrecta, cuenta inactiva,
+ * correo inexistente). Un login exitoso NUNCA debe llamar a esto.
+ */
+export async function registrarIntentoFallido(key: string): Promise<void> {
+  if (upstashLimiter) {
+    await upstashLimiter.limit(key);
+    return;
+  }
+  memoryRegistrarFallo(key);
 }
 
 export function getClientIp(request: Request): string {

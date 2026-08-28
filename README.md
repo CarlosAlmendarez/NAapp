@@ -158,6 +158,32 @@ ambas para un mismo usuario si hace falta.
 npm run dev
 ```
 
+## 5.1 Pruebas de responsividad (Playwright)
+
+`tests/responsive.spec.ts` visita las pantallas principales en tres
+tamaños (celular 390px, tablet 768px, escritorio 1440px) con los tres
+roles (Admin general, Capturador, Representante General) y verifica que:
+ninguna página genere scroll horizontal, y que los datos clave (nombre,
+correo, rol, localidades, tipo de casilla, distrito, etc.) sigan visibles
+en cada tamaño — en vez de quedar ocultos por columnas de tabla que no
+caben en una pantalla angosta.
+
+Para correrlas:
+
+```bash
+npm run build
+npm run start          # deja el server corriendo en :3000 en otra terminal
+npm run test:responsive
+```
+
+Requiere que ya existan en la base el Administrador general, al menos el
+capturador de un distrito (`distrito12@...`) y el usuario RG de prueba
+(`npx tsx scripts/crear-usuario-rg-prueba.ts`) — ajusta las credenciales en
+`tests/responsive.spec.ts` si tu base tiene otras.
+
+Nota: la primera vez, instala el navegador de Playwright con
+`npx playwright install chromium`.
+
 ## 6. Primer deploy en Vercel
 
 1. Conecta el repositorio en [vercel.com/new](https://vercel.com/new).
@@ -250,12 +276,14 @@ src/app/login/               Login (única puerta de entrada; sin registro públ
   ya filtró la UI.
 - **Contraseñas**: `bcryptjs`, 12 rounds. Política mínima: 10+ caracteres,
   mayúscula, minúscula y número (`src/lib/validations/auth.ts`).
-- **Rate limiting de login**: 5 intentos / 15 min por IP+correo
-  (`src/lib/rate-limit.ts`). Usa Upstash Redis si está configurado
-  (compartido entre todas las instancias serverless de Vercel). **Sin
-  Upstash configurado, cae a un limitador en memoria de un solo proceso —
-  no protege nada en producción con múltiples instancias serverless.**
-  Configura Upstash antes de ir a producción.
+- **Rate limiting de login**: 5 intentos **fallidos** / 15 min por
+  IP+correo (`src/lib/rate-limit.ts`) — se cuenta solo lo fallido a
+  propósito, para no bloquear a alguien que entra y sale de sesión varias
+  veces seguidas con la contraseña correcta. Usa Upstash Redis si está
+  configurado (compartido entre todas las instancias serverless de
+  Vercel). **Sin Upstash configurado, cae a un limitador en memoria de un
+  solo proceso — no protege nada en producción con múltiples instancias
+  serverless.** Configura Upstash antes de ir a producción.
 - **Enumeración de cuentas**: el login siempre responde con el mismo
   mensaje genérico y compara contra un hash "señuelo" cuando el correo no
   existe, para que el tiempo de respuesta no delate si una cuenta existe.

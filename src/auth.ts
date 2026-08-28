@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { authConfig } from "@/auth.config";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations/auth";
-import { checkLoginRateLimit, getClientIp } from "@/lib/rate-limit";
+import { bloqueadoPorIntentos, registrarIntentoFallido, getClientIp } from "@/lib/rate-limit";
 import { registrarAuditoria } from "@/lib/audit";
 
 /**
@@ -42,8 +42,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const ip = getClientIp(request);
         const rateLimitKey = `${ip}:${correo}`;
-        const { success } = await checkLoginRateLimit(rateLimitKey);
-        if (!success) {
+        // Solo consulta si ya está bloqueado — no cuenta como intento, para
+        // no penalizar logins correctos repetidos (varias pestañas, entrar
+        // y salir de sesión seguido, etc.).
+        if (await bloqueadoPorIntentos(rateLimitKey)) {
           await registrarAuditoria({
             usuarioId: null,
             accion: "LOGIN_BLOQUEADO_RATE_LIMIT",
@@ -62,6 +64,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         );
 
         if (!usuario || !usuario.activo || !passwordValida) {
+          // Solo un intento fallido cuenta para el límite de intentos.
+          await registrarIntentoFallido(rateLimitKey);
           await registrarAuditoria({
             usuarioId: usuario?.id ?? null,
             accion: "LOGIN_FALLIDO",

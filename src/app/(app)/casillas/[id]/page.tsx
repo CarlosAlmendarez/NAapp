@@ -51,13 +51,11 @@ export default async function CasillaDetallePage({
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Distrito local {casilla.distritoLocal}
             </p>
-            <CardTitle className="mt-0.5 flex flex-wrap items-center gap-2">
-              Sección {casilla.seccion}
-              <span className="flex items-center gap-1.5 text-sm font-normal text-muted-foreground">
-                Tipo de Casilla:
-                <Badge variant="accent">{formatTipoCasilla(casilla.tipoCasilla)}</Badge>
-              </span>
-            </CardTitle>
+            <CardTitle className="mt-0.5">Sección {casilla.seccion}</CardTitle>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 whitespace-nowrap text-sm font-normal text-muted-foreground">
+              Tipo de Casilla:
+              <Badge variant="accent">{formatTipoCasilla(casilla.tipoCasilla)}</Badge>
+            </div>
             <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
               <MapPin className="h-3.5 w-3.5" />
               {casilla.municipio} · {casilla.coloniaLocalidad}

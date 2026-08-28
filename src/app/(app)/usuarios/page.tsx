@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { ROL_LABELS } from "@/lib/roles";
 import { etiquetasLocalidades } from "@/lib/localidad";
+import { UsuarioCard } from "@/components/usuarios/usuario-card";
 
 export default async function UsuariosPage() {
   const usuario = await requireUser();
@@ -40,38 +41,51 @@ export default async function UsuariosPage() {
         </Button>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nombre</TableHead>
-            <TableHead>Correo</TableHead>
-            <TableHead>Rol</TableHead>
-            <TableHead>Localidades</TableHead>
-            <TableHead>Estado</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {usuarios.map((u) => (
-            <TableRow key={u.id} className="cursor-pointer">
-              <TableCell>
-                <Link href={`/usuarios/${u.id}`} className="font-medium text-primary hover:underline">
-                  {u.nombre}
-                </Link>
-              </TableCell>
-              <TableCell className="text-muted-foreground">{u.correo}</TableCell>
-              <TableCell>{ROL_LABELS[u.rol]}</TableCell>
-              <TableCell className="text-muted-foreground">
-                {etiquetasLocalidades(u.localidades)}
-              </TableCell>
-              <TableCell>
-                <Badge variant={u.activo ? "success" : "outline"}>
-                  {u.activo ? "Activo" : "Inactivo"}
-                </Badge>
-              </TableCell>
+      {/* Celular: tarjetas apiladas (la tabla de 5 columnas no cabe sin
+          ocultar Rol/Localidades/Estado). Tablet/escritorio: tabla. */}
+      <div className="space-y-3 sm:hidden" data-testid="usuarios-lista-movil">
+        {usuarios.map((u) => (
+          <UsuarioCard key={u.id} usuario={u} />
+        ))}
+      </div>
+
+      <div className="hidden sm:block" data-testid="usuarios-tabla-escritorio">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nombre</TableHead>
+              <TableHead>Correo</TableHead>
+              <TableHead>Rol</TableHead>
+              <TableHead>Localidades</TableHead>
+              <TableHead>Estado</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {usuarios.map((u) => (
+              <TableRow key={u.id} className="cursor-pointer">
+                <TableCell>
+                  <Link
+                    href={`/usuarios/${u.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {u.nombre}
+                  </Link>
+                </TableCell>
+                <TableCell className="text-muted-foreground">{u.correo}</TableCell>
+                <TableCell>{ROL_LABELS[u.rol]}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {etiquetasLocalidades(u.localidades)}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={u.activo ? "success" : "outline"}>
+                    {u.activo ? "Activo" : "Inactivo"}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
