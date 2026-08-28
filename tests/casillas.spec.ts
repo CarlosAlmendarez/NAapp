@@ -90,7 +90,10 @@ test.describe.serial("Casilla: crear y capturar RC (Admin general)", () => {
   test("captura el RC suplente y el resumen queda completo", async ({ page }) => {
     await login(page, CREDENCIALES.adminGeneral);
     await page.goto(`/casillas/${casillaId}`);
-    await page.getByRole("link", { name: "Capturar" }).click(); // ya solo queda el de suplente
+    // Admin general también ve la sección de Enlace de casilla (módulo
+    // Rutas), que también trae su propio botón "Capturar" — .first() toma
+    // el de RC suplente (la sección de RC va antes en el DOM).
+    await page.getByRole("link", { name: "Capturar" }).first().click();
     await page.waitForURL(/\/representante\/suplente$/);
 
     await page.getByLabel("Nombre(s)").fill("María");
@@ -157,31 +160,32 @@ test.describe("Acceso a casillas por rol y localidad", () => {
     await expect(page.getByRole("heading", { name: "Representantes de Casilla" })).toBeVisible();
   });
 
-  test("Representante General: puede crear casillas pero no ve RC", async ({ page }) => {
+  test("Representante General: no puede crear casillas y no ve RC (ve Enlace)", async ({
+    page,
+  }) => {
+    const casillaSalinas = await prisma.casilla.findFirst({
+      where: { distritoLocal: "2. SALINAS" },
+    });
+    expect(
+      casillaSalinas,
+      "debe existir al menos una casilla real en el distrito 2. SALINAS"
+    ).toBeTruthy();
+
     await login(page, CREDENCIALES.rg);
+
+    // Ya no administra el catálogo de casillas — solo Admin general/Admin
+    // de casillas pueden crear casillas (ver tests/rutas.spec.ts para el
+    // módulo de Rutas, que sí le corresponde al RG).
     await page.goto("/casillas/nueva");
+    await expect(page).toHaveURL(/\/casillas$/);
 
-    const seccion = seccionDePrueba();
-    await page.getByLabel("Distrito local").fill("2. SALINAS");
-    await page.getByLabel("Municipio").click();
-    await page.getByRole("option", { name: "SALINAS" }).click();
-    await page.getByLabel("Sección").fill(String(seccion));
-    await page.getByLabel(/Tipo de casilla/).fill("B");
-    await page.getByLabel("Colonia / localidad").fill(MARCADOR);
-    await page.getByLabel("Domicilio").fill("Calle RG 1");
-    await page.getByLabel(/Ubicación/).fill("Ubicación RG");
-    await page.getByRole("button", { name: "Crear casilla" }).click();
-
-    // Ver el comentario en el primer test del archivo: se espera contenido
-    // real antes de leer la URL, no waitForURL con una regex ambigua.
-    await expect(page.getByText(`Sección ${seccion}`)).toBeVisible({ timeout: 10000 });
-    const casillaId = page.url().split("/casillas/")[1]!;
-    expect(casillaId).not.toBe("nueva");
+    await page.goto(`/casillas/${casillaSalinas!.id}`);
     await expect(page.getByRole("heading", { name: "Representantes de Casilla" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Enlace de casilla" })).toBeVisible();
 
-    await page.goto(`/casillas/${casillaId}/representante/propietario`);
-    // Igual que arriba: lo que importa es que el formulario de RC nunca
-    // se muestra, más allá del código HTTP exacto.
+    await page.goto(`/casillas/${casillaSalinas!.id}/representante/propietario`);
+    // Lo que importa es que el formulario de RC nunca se muestra, más allá
+    // del código HTTP exacto (ver nota sobre notFound() en loading.tsx).
     await expect(page.getByLabel("Clave de elector")).toHaveCount(0);
   });
 

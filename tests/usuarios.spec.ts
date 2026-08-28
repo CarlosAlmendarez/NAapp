@@ -50,7 +50,7 @@ test.describe("Crear usuarios (Admin general) — un caso por rol", () => {
     await expect(page.getByTestId("usuarios-tabla-escritorio").getByText(correo)).toBeVisible();
   });
 
-  test("crea un Representante General (RG)", async ({ page }) => {
+  test("crea un Representante General (RG) con distrito local asignado", async ({ page }) => {
     const correo = correoDePrueba("PRUEBA-E2E-rg");
     await login(page, CREDENCIALES.adminGeneral);
     await page.goto("/usuarios/nuevo");
@@ -60,10 +60,40 @@ test.describe("Crear usuarios (Admin general) — un caso por rol", () => {
     await page.getByLabel("Contraseña temporal").fill("Prueba123!Segura");
     await page.getByLabel("Rol").click();
     await page.getByRole("option", { name: "Representante General (RG)" }).click();
+    // Comparte distrito con un Capturador de prueba (permitido: el límite
+    // de "1 RG por distrito" solo aplica entre RG, ver
+    // actions/usuarios.ts) — evita el distrito "2. SALINAS" del RG ya
+    // sembrado (rg@nuevaalianzaslp.org) para no chocar con esa regla.
+    await page.getByRole("tab", { name: "Distritos locales" }).click();
+    await page.getByRole("checkbox", { name: "1. MATEHUALA" }).click();
     await page.getByRole("button", { name: "Crear usuario" }).click();
 
     await page.waitForURL(/\/usuarios$/);
     await expect(page.getByTestId("usuarios-tabla-escritorio").getByText(correo)).toBeVisible();
+  });
+
+  test("un segundo RG no puede tomar un distrito ya asignado a otro RG activo", async ({
+    page,
+  }) => {
+    const correo = correoDePrueba("PRUEBA-E2E-rg-conflicto");
+    await login(page, CREDENCIALES.adminGeneral);
+    await page.goto("/usuarios/nuevo");
+
+    await page.getByLabel("Nombre completo").fill("PRUEBA-E2E RG Conflicto");
+    await page.getByLabel("Correo").fill(correo);
+    await page.getByLabel("Contraseña temporal").fill("Prueba123!Segura");
+    await page.getByLabel("Rol").click();
+    await page.getByRole("option", { name: "Representante General (RG)" }).click();
+    // "2. SALINAS" ya lo tiene rg@nuevaalianzaslp.org (usuario sembrado,
+    // activo) — debe rechazarse.
+    await page.getByRole("tab", { name: "Distritos locales" }).click();
+    await page.getByRole("checkbox", { name: "2. SALINAS" }).click();
+    await page.getByRole("button", { name: "Crear usuario" }).click();
+
+    await expect(
+      page.getByText(/ya tiene asignado a otro Representante General activo/)
+    ).toBeVisible();
+    await expect(page).toHaveURL(/\/usuarios\/nuevo$/);
   });
 
   test("un Capturador sin ninguna localidad marcada no se puede crear (validación)", async ({

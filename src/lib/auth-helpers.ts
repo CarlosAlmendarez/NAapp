@@ -30,25 +30,38 @@ export class AutorizacionError extends Error {}
 
 /**
  * Roles que no están acotados a municipios/distritos específicos — ven y
- * pueden operar sobre cualquier casilla del catálogo. Capturador es el
- * único rol que sí se restringe por localidad asignada.
+ * pueden operar sobre cualquier casilla del catálogo. Capturador y
+ * Representante General (RG) son los roles que sí se restringen por
+ * localidad asignada: cada distrito local tiene su propio RG, que solo
+ * debe ver y capturar rutas de las casillas de su(s) distrito(s).
  */
-const ROLES_SIN_RESTRICCION_GEOGRAFICA: Rol[] = [
-  "ADMIN_GENERAL",
-  "ADMIN_CASILLAS",
-  "REPRESENTANTE_GENERAL",
-];
+const ROLES_SIN_RESTRICCION_GEOGRAFICA: Rol[] = ["ADMIN_GENERAL", "ADMIN_CASILLAS"];
+
+export function sinRestriccionGeografica(usuario: UsuarioAutenticado): boolean {
+  return ROLES_SIN_RESTRICCION_GEOGRAFICA.includes(usuario.rol);
+}
 
 /**
  * Roles que pueden crear/editar/eliminar casillas (el catálogo en sí).
- * Coincide hoy con ROLES_SIN_RESTRICCION_GEOGRAFICA, pero se deja como una
- * lista aparte porque representan cosas distintas (alcance geográfico vs.
- * permiso de CRUD) — un futuro rol podría tener una sin la otra.
+ * El Representante General queda excluido a propósito: solo administra el
+ * módulo de Rutas (ver ROLES_MODULO_RUTAS), nunca el catálogo.
  */
-const ROLES_ADMINISTRAN_CASILLAS: Rol[] = ["ADMIN_GENERAL", "ADMIN_CASILLAS", "REPRESENTANTE_GENERAL"];
+const ROLES_ADMINISTRAN_CASILLAS: Rol[] = ["ADMIN_GENERAL", "ADMIN_CASILLAS"];
 
 export function puedeAdministrarCasillas(usuario: UsuarioAutenticado): boolean {
   return ROLES_ADMINISTRAN_CASILLAS.includes(usuario.rol);
+}
+
+/**
+ * Roles con acceso al módulo de Rutas (capturar/editar el enlace de cada
+ * casilla — ver EnlaceCasilla). Admin de casillas y Capturador quedan
+ * fuera a propósito: el primero administra el catálogo, el segundo
+ * captura RC, y ninguno de los dos participa en el recorrido de rutas.
+ */
+const ROLES_MODULO_RUTAS: Rol[] = ["ADMIN_GENERAL", "REPRESENTANTE_GENERAL"];
+
+export function puedeUsarModuloRutas(usuario: UsuarioAutenticado): boolean {
+  return ROLES_MODULO_RUTAS.includes(usuario.rol);
 }
 
 /**

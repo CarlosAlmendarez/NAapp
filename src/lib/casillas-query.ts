@@ -1,7 +1,11 @@
 import "server-only";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { filtroCasillasPorRol, type UsuarioAutenticado } from "@/lib/auth-helpers";
+import {
+  filtroCasillasPorRol,
+  sinRestriccionGeografica,
+  type UsuarioAutenticado,
+} from "@/lib/auth-helpers";
 
 const PAGE_SIZE = 20;
 
@@ -61,14 +65,15 @@ export async function listarCasillas(usuario: UsuarioAutenticado, filtros: Filtr
 
 /**
  * Municipios disponibles para el selector de filtro, según el alcance del
- * usuario. Para un capturador se derivan consultando qué municipios
- * realmente tienen casillas dentro de su alcance (municipios asignados
- * directamente + municipios con casillas en sus distritos locales
- * asignados) — así funciona igual sin importar si se le asignó acceso por
- * municipio, por distrito, o ambos.
+ * usuario. Para un rol restringido geográficamente (Capturador o
+ * Representante General) se derivan consultando qué municipios realmente
+ * tienen casillas dentro de su alcance (municipios asignados directamente
+ * + municipios con casillas en sus distritos locales asignados) — así
+ * funciona igual sin importar si se le asignó acceso por municipio, por
+ * distrito, o ambos.
  */
 export async function municipiosDisponibles(usuario: UsuarioAutenticado): Promise<string[]> {
-  if (usuario.rol !== "CAPTURADOR") {
+  if (sinRestriccionGeografica(usuario)) {
     const municipios = await prisma.municipio.findMany({ orderBy: { nombre: "asc" } });
     return municipios.map((m) => m.nombre);
   }

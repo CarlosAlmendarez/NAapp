@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Rol } from "@prisma/client";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Vote, Users, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Vote, Users, BarChart3, Map } from "lucide-react";
 
 const ITEMS: { href: string; label: string; icon: typeof LayoutDashboard; roles: Rol[] }[] = [
   {
@@ -18,6 +18,12 @@ const ITEMS: { href: string; label: string; icon: typeof LayoutDashboard; roles:
     label: "Casillas",
     icon: Vote,
     roles: ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR", "REPRESENTANTE_GENERAL"],
+  },
+  {
+    href: "/rutas",
+    label: "Rutas",
+    icon: Map,
+    roles: ["ADMIN_GENERAL", "REPRESENTANTE_GENERAL"],
   },
   { href: "/usuarios", label: "Usuarios", icon: Users, roles: ["ADMIN_GENERAL"] },
   {

@@ -17,20 +17,23 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-semibold text-foreground">Hola, {usuario.nombre}</h1>
         <p className="text-sm text-muted-foreground">
           {ROL_LABELS[usuario.rol]}
-          {usuario.rol === "CAPTURADOR" && usuario.localidades.length > 0 && (
-            <> · Localidades asignadas: {etiquetasLocalidades(usuario.localidades)}</>
-          )}
+          {(usuario.rol === "CAPTURADOR" || usuario.rol === "REPRESENTANTE_GENERAL") &&
+            usuario.localidades.length > 0 && (
+              <> · Localidades asignadas: {etiquetasLocalidades(usuario.localidades)}</>
+            )}
         </p>
       </div>
 
-      {usuario.rol === "CAPTURADOR" && usuario.localidades.length === 0 && (
-        <Card className="border-warning/40 bg-warning/5">
-          <CardContent className="p-4 text-sm text-warning">
-            Aún no tienes ninguna localidad/municipio asignado. Contacta al Administrador
-            general para que te asigne acceso antes de poder capturar casillas.
-          </CardContent>
-        </Card>
-      )}
+      {(usuario.rol === "CAPTURADOR" || usuario.rol === "REPRESENTANTE_GENERAL") &&
+        usuario.localidades.length === 0 && (
+          <Card className="border-warning/40 bg-warning/5">
+            <CardContent className="p-4 text-sm text-warning">
+              Aún no tienes ninguna localidad/distrito asignado. Contacta al Administrador
+              general para que te asigne acceso antes de poder capturar
+              {usuario.rol === "CAPTURADOR" ? " casillas." : " rutas."}
+            </CardContent>
+          </Card>
+        )}
 
       <StatsCards stats={stats} />
 
@@ -46,6 +49,11 @@ export default async function DashboardPage() {
           {(usuario.rol === "ADMIN_GENERAL" || usuario.rol === "ADMIN_CASILLAS") && (
             <Button asChild variant="secondary">
               <Link href="/casillas/nueva">Agregar casilla</Link>
+            </Button>
+          )}
+          {(usuario.rol === "ADMIN_GENERAL" || usuario.rol === "REPRESENTANTE_GENERAL") && (
+            <Button asChild variant="secondary">
+              <Link href="/rutas">Ir a Rutas</Link>
             </Button>
           )}
           {usuario.rol === "ADMIN_GENERAL" && (

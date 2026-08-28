@@ -21,9 +21,13 @@ enum Rol {
   ADMIN_GENERAL
   ADMIN_CASILLAS
   CAPTURADOR
-  // Representante General: solo crea/edita/elimina casillas (el catálogo
-  // en sí). No captura RC propietario/suplente ni asistentes electorales.
-  // Sin restricción de municipio/distrito (como Admin de casillas).
+  // Representante General (RG): uno por distrito local (ver la validación
+  // de unicidad en actions/usuarios.ts). Nunca crea/edita/elimina casillas
+  // (solo Admin general y Admin de casillas) ni captura RC
+  // propietario/suplente. En cambio, recorre las casillas de su distrito
+  // registrando el "enlace" de cada una (ver EnlaceCasilla) — está
+  // restringido geográficamente igual que Capturador, vía
+  // UsuarioLocalidad.
   REPRESENTANTE_GENERAL
 }
 
@@ -93,6 +97,8 @@ model Usuario {
   representantesActualizados RepresentanteCasilla[] @relation("RepresentanteUpdatedBy")
   asistentesCapturados     AsistenteElectoral[]   @relation("AsistenteCapturadoPor")
   asistentesActualizados   AsistenteElectoral[]   @relation("AsistenteUpdatedBy")
+  enlacesCapturados        EnlaceCasilla[]        @relation("EnlaceCapturadoPor")
+  enlacesActualizados      EnlaceCasilla[]        @relation("EnlaceUpdatedBy")
   usuariosCreados          Usuario[]              @relation("UsuarioCreatedBy")
   creadoPor                Usuario?               @relation("UsuarioCreatedBy", fields: [creadoPorId], references: [id])
   creadoPorId              String?
@@ -153,6 +159,7 @@ model Casilla {
 
   representantes RepresentanteCasilla[]
   asistentes     AsistenteElectoral[]
+  enlace         EnlaceCasilla?
 
   // Una sección puede tener varias casillas (básica, contigua 1, 2...) pero
   // la combinación sección + tipo de casilla es única.
@@ -215,6 +222,42 @@ model AsistenteElectoral {
 
   @@index([casillaId])
   @@map("asistentes_electorales")
+}
+
+// Módulo "Rutas": el Representante General (RG) recorre las casillas de su
+// distrito local y va registrando, una por una y en el orden que prefiera,
+// al enlace/contacto de esa casilla (distinto del RC propietario/suplente
+// de RepresentanteCasilla). Como máximo un enlace por casilla — de ahí el
+// `@unique` en casillaId, a diferencia de AsistenteElectoral que sí admite
+// varios. El orden de la "ruta" mostrado en la UI es `capturadoEn`
+// ascendente, y no cambia al editar (solo `updatedAt` se mueve): se puede
+// corregir el contenido de una parada ya visitada, pero no deshacerla ni
+// quitarla de la ruta (no existe una acción de borrado para este modelo,
+// igual que con Casilla, para proteger el registro).
+model EnlaceCasilla {
+  id        String  @id @default(cuid())
+  casillaId String  @unique
+  casilla   Casilla @relation(fields: [casillaId], references: [id], onDelete: Cascade)
+
+  nombre            String
+  apellidoPaterno   String
+  apellidoMaterno   String?
+  // Cifrada en reposo con AES-256-GCM (ver src/lib/crypto.ts), igual que en
+  // RepresentanteCasilla.
+  claveElectorCifrada String
+  telefono           String
+  correoElectronico  String?
+
+  capturadoPorId String?
+  capturadoPor   Usuario?  @relation("EnlaceCapturadoPor", fields: [capturadoPorId], references: [id])
+  capturadoEn    DateTime  @default(now())
+
+  updatedById String?
+  updatedBy   Usuario? @relation("EnlaceUpdatedBy", fields: [updatedById], references: [id])
+  updatedAt   DateTime @updatedAt
+
+  @@index([casillaId])
+  @@map("enlaces_casilla")
 }
 
 // ---------------------------------------------------------------------------

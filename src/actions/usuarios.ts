@@ -14,6 +14,41 @@ import { ejecutarAccion, AccionError, type ActionResult } from "@/lib/action-res
 
 const BCRYPT_ROUNDS = 12;
 
+const ROLES_CON_LOCALIDADES: readonly string[] = ["CAPTURADOR", "REPRESENTANTE_GENERAL"];
+
+/**
+ * Un distrito local solo debe tener 1 Representante General activo a la
+ * vez (evita capturas duplicadas/confusas del mismo distrito en el
+ * módulo de Rutas). `excluirUsuarioId` se usa al editar, para no chocar
+ * contra el propio registro que se está guardando.
+ */
+async function verificarDistritoLibreParaRG(
+  localidades: { tipo: "MUNICIPIO" | "DISTRITO_LOCAL"; valor: string }[],
+  excluirUsuarioId?: string
+): Promise<void> {
+  const distritos = localidades.filter((l) => l.tipo === "DISTRITO_LOCAL").map((l) => l.valor);
+  if (distritos.length === 0) return;
+
+  const conflicto = await prisma.usuarioLocalidad.findFirst({
+    where: {
+      tipo: "DISTRITO_LOCAL",
+      valor: { in: distritos },
+      usuario: {
+        rol: "REPRESENTANTE_GENERAL",
+        activo: true,
+        ...(excluirUsuarioId ? { NOT: { id: excluirUsuarioId } } : {}),
+      },
+    },
+    include: { usuario: true },
+  });
+
+  if (conflicto) {
+    throw new AccionError(
+      `El distrito local "${conflicto.valor}" ya tiene asignado a otro Representante General activo (${conflicto.usuario.nombre}).`
+    );
+  }
+}
+
 /** Solo el Administrador general crea, edita y desactiva usuarios. */
 export async function crearUsuario(formData: unknown): Promise<ActionResult<{ id: string }>> {
   return ejecutarAccion(async () => {
@@ -25,6 +60,10 @@ export async function crearUsuario(formData: unknown): Promise<ActionResult<{ id
     const existente = await prisma.usuario.findUnique({ where: { correo: datos.correo } });
     if (existente) throw new AccionError("Ya existe un usuario con ese correo.");
 
+    if (datos.rol === "REPRESENTANTE_GENERAL") {
+      await verificarDistritoLibreParaRG(datos.localidades);
+    }
+
     const passwordHash = await bcrypt.hash(datos.password, BCRYPT_ROUNDS);
 
     const nuevo = await prisma.usuario.create({
@@ -34,10 +73,9 @@ export async function crearUsuario(formData: unknown): Promise<ActionResult<{ id
         passwordHash,
         rol: datos.rol,
         creadoPorId: admin.id,
-        localidades:
-          datos.rol === "CAPTURADOR"
-            ? { create: datos.localidades.map((l) => ({ tipo: l.tipo, valor: l.valor })) }
-            : undefined,
+        localidades: ROLES_CON_LOCALIDADES.includes(datos.rol)
+          ? { create: datos.localidades.map((l) => ({ tipo: l.tipo, valor: l.valor })) }
+          : undefined,
       },
     });
 
@@ -69,6 +107,13 @@ export async function actualizarUsuario(formData: unknown): Promise<ActionResult
     });
     if (correoEnUso) throw new AccionError("Ese correo ya está en uso por otro usuario.");
 
+    // Solo importa si el usuario quedará como RG activo tras este guardado
+    // — uno ya desactivado, o que deja de ser RG, no debe bloquear el
+    // distrito para nadie más.
+    if (datos.rol === "REPRESENTANTE_GENERAL" && datos.activo) {
+      await verificarDistritoLibreParaRG(datos.localidades, datos.id);
+    }
+
     const seDesactivo = anterior.activo && !datos.activo;
 
     const actualizado = await prisma.$transaction(async (tx) => {
@@ -85,7 +130,7 @@ export async function actualizarUsuario(formData: unknown): Promise<ActionResult
       });
 
       await tx.usuarioLocalidad.deleteMany({ where: { usuarioId: datos.id } });
-      if (datos.rol === "CAPTURADOR" && datos.localidades.length > 0) {
+      if (ROLES_CON_LOCALIDADES.includes(datos.rol) && datos.localidades.length > 0) {
         await tx.usuarioLocalidad.createMany({
           data: datos.localidades.map((l) => ({
             usuarioId: datos.id,

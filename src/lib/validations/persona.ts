@@ -56,3 +56,21 @@ export const asistenteSchema = z.object({
 });
 
 export type AsistenteInput = z.infer<typeof asistenteSchema>;
+
+// Enlace de casilla (módulo Rutas, capturado por el Representante
+// General): a diferencia del RC, aquí el teléfono es obligatorio — es el
+// dato de contacto principal que el RG registra al recorrer su distrito.
+export const enlaceCasillaSchema = z.object({
+  nombre: nombrePersonaSchema.nombre,
+  apellidoPaterno: nombrePersonaSchema.apellidoPaterno,
+  apellidoMaterno: nombrePersonaSchema.apellidoMaterno,
+  claveElector: nombrePersonaSchema.claveElector,
+  telefono: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/\D+/g, ""))
+    .refine((v) => v.length === 10, "El teléfono debe tener 10 dígitos."),
+  correoElectronico: nombrePersonaSchema.correoElectronico,
+});
+
+export type EnlaceCasillaInput = z.infer<typeof enlaceCasillaSchema>;

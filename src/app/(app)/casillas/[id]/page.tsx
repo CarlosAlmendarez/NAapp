@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MapPin } from "lucide-react";
-import { requireUser, tieneAccesoALocalidad } from "@/lib/auth-helpers";
+import { requireUser, tieneAccesoALocalidad, puedeUsarModuloRutas } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,20 +21,22 @@ export default async function CasillaDetallePage({
     where: { id },
     include: {
       representantes: { orderBy: { tipo: "asc" } },
+      enlace: true,
     },
   });
 
   if (!casilla) notFound();
 
-  // Un capturador sin acceso a este municipio/distrito no debe ni
+  // Un capturador (o RG) sin acceso a este municipio/distrito no debe ni
   // enterarse de que la casilla existe.
   if (!tieneAccesoALocalidad(usuario, casilla)) {
     notFound();
   }
 
-  // El Representante General solo administra el catálogo de casillas —
-  // no debe ver la sección de RC.
+  // El Representante General no captura RC — solo ve la sección de
+  // Enlace de casilla (módulo Rutas), nunca la de RC.
   const puedeVerRc = usuario.rol !== "REPRESENTANTE_GENERAL";
+  const puedeVerEnlace = puedeUsarModuloRutas(usuario);
   const propietario = casilla.representantes.find((r) => r.tipo === "PROPIETARIO");
   const suplente = casilla.representantes.find((r) => r.tipo === "SUPLENTE");
 
@@ -94,7 +96,58 @@ export default async function CasillaDetallePage({
           />
         </div>
       )}
+
+      {puedeVerEnlace && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-foreground">Enlace de casilla (Ruta)</h2>
+          <EnlaceResumen casillaId={casilla.id} enlace={casilla.enlace} />
+        </div>
+      )}
     </div>
+  );
+}
+
+function EnlaceResumen({
+  casillaId,
+  enlace,
+}: {
+  casillaId: string;
+  enlace?: {
+    nombre: string;
+    apellidoPaterno: string;
+    apellidoMaterno: string | null;
+    telefono: string;
+    correoElectronico: string | null;
+    capturadoEn: Date;
+  } | null;
+}) {
+  return (
+    <Card>
+      <CardContent className="flex items-center justify-between gap-3 p-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="font-medium text-foreground">Enlace</p>
+            <Badge variant={enlace ? "success" : "outline"}>
+              {enlace ? "Capturado" : "Pendiente"}
+            </Badge>
+          </div>
+          {enlace ? (
+            <>
+              <p className="truncate text-sm text-foreground">{nombreCompleto(enlace)}</p>
+              <p className="truncate text-xs text-muted-foreground">Tel: {enlace.telefono}</p>
+              <p className="text-xs text-muted-foreground">
+                Capturado el {formatFecha(enlace.capturadoEn)}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Sin capturar</p>
+          )}
+        </div>
+        <Button asChild variant={enlace ? "outline" : "default"} size="sm">
+          <Link href={`/rutas/${casillaId}`}>{enlace ? "Editar" : "Capturar"}</Link>
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

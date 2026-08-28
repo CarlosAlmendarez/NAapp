@@ -123,7 +123,7 @@ export function UsuarioForm({
         <FieldError messages={fieldErrors.rol} />
       </div>
 
-      {rol === "CAPTURADOR" && (
+      {(rol === "CAPTURADOR" || rol === "REPRESENTANTE_GENERAL") && (
         <LocalidadPickerConLabel
           municipios={municipios}
           distritosLocales={distritosLocales}

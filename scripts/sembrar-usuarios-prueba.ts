@@ -53,7 +53,23 @@ async function crearSiNoExiste(datos: {
 }) {
   const existente = await prisma.usuario.findUnique({ where: { correo: datos.correo } });
   if (existente) {
-    console.log(`✔ ${datos.correo} ya existe, sin cambios.`);
+    // Ya existe de una corrida anterior — se asegura igual de que tenga la
+    // localidad esperada (ej. al agregar la restricción geográfica del RG
+    // después de que el usuario de prueba ya existía).
+    if (datos.localidad) {
+      await prisma.usuarioLocalidad.upsert({
+        where: {
+          usuarioId_tipo_valor: {
+            usuarioId: existente.id,
+            tipo: datos.localidad.tipo,
+            valor: datos.localidad.valor,
+          },
+        },
+        create: { usuarioId: existente.id, ...datos.localidad },
+        update: {},
+      });
+    }
+    console.log(`✔ ${datos.correo} ya existe, sin cambios (localidad asegurada).`);
     return;
   }
 
@@ -77,6 +93,10 @@ async function main() {
     correo: RG.correo,
     password: RG.password,
     rol: Rol.REPRESENTANTE_GENERAL,
+    // Restringido a este distrito desde que el RG dejó de tener acceso
+    // ilimitado (ver módulo de Rutas) — mismo distrito que ya usaban las
+    // pruebas de tests/casillas.spec.ts para crear casillas de RG.
+    localidad: { tipo: "DISTRITO_LOCAL", valor: "2. SALINAS" },
   });
 
   await crearSiNoExiste({

@@ -21,10 +21,16 @@ export const crearUsuarioSchema = z
     rol: rolSchema,
     localidades: z.array(localidadAsignadaSchema).default([]),
   })
-  .refine((data) => data.rol !== "CAPTURADOR" || data.localidades.length > 0, {
-    message: "Un capturador debe tener al menos un municipio o distrito local asignado.",
-    path: ["localidades"],
-  });
+  .refine(
+    (data) =>
+      (data.rol !== "CAPTURADOR" && data.rol !== "REPRESENTANTE_GENERAL") ||
+      data.localidades.length > 0,
+    {
+      message:
+        "Un capturador o Representante General debe tener al menos un municipio o distrito local asignado.",
+      path: ["localidades"],
+    }
+  );
 
 export type CrearUsuarioInput = z.infer<typeof crearUsuarioSchema>;
 
@@ -37,10 +43,16 @@ export const editarUsuarioSchema = z
     activo: z.boolean(),
     localidades: z.array(localidadAsignadaSchema).default([]),
   })
-  .refine((data) => data.rol !== "CAPTURADOR" || data.localidades.length > 0, {
-    message: "Un capturador debe tener al menos un municipio o distrito local asignado.",
-    path: ["localidades"],
-  });
+  .refine(
+    (data) =>
+      (data.rol !== "CAPTURADOR" && data.rol !== "REPRESENTANTE_GENERAL") ||
+      data.localidades.length > 0,
+    {
+      message:
+        "Un capturador o Representante General debe tener al menos un municipio o distrito local asignado.",
+      path: ["localidades"],
+    }
+  );
 
 export type EditarUsuarioInput = z.infer<typeof editarUsuarioSchema>;
 
