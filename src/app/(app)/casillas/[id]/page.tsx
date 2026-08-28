@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { EliminarAsistenteButton } from "@/components/casillas/eliminar-asistente-button";
 import { EliminarCasillaButton } from "@/components/casillas/eliminar-casilla-button";
 import { nombreCompleto, formatFecha } from "@/lib/utils";
+import { formatTipoCasilla } from "@/lib/tipo-casilla";
 
 export default async function CasillaDetallePage({
   params,
@@ -43,10 +44,13 @@ export default async function CasillaDetallePage({
     <div className="space-y-6">
       <Card>
         <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
-          <div>
-            <CardTitle className="flex flex-wrap items-center gap-2">
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Distrito local {casilla.distritoLocal}
+            </p>
+            <CardTitle className="mt-0.5 flex flex-wrap items-center gap-2">
               Sección {casilla.seccion}
-              <Badge variant="secondary">{casilla.tipoCasilla}</Badge>
+              <Badge variant="accent">{formatTipoCasilla(casilla.tipoCasilla)}</Badge>
             </CardTitle>
             <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
               <MapPin className="h-3.5 w-3.5" />
@@ -66,13 +70,9 @@ export default async function CasillaDetallePage({
           )}
         </CardHeader>
         <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
-          <p>
+          <p className="sm:col-span-2">
             <span className="text-muted-foreground">Distrito federal: </span>
             {casilla.distritoFederal}
-          </p>
-          <p>
-            <span className="text-muted-foreground">Distrito local: </span>
-            {casilla.distritoLocal}
           </p>
           <p className="sm:col-span-2">
             <span className="text-muted-foreground">Domicilio: </span>

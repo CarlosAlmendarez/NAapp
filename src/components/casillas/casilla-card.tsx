@@ -2,10 +2,12 @@ import Link from "next/link";
 import { MapPin, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatTipoCasilla } from "@/lib/tipo-casilla";
 
 type CasillaResumen = {
   id: string;
   municipio: string;
+  distritoLocal: string;
   seccion: number;
   tipoCasilla: string;
   coloniaLocalidad: string;
@@ -23,9 +25,12 @@ export function CasillaCard({ casilla }: { casilla: CasillaResumen }) {
       <Card className="transition-colors hover:border-primary">
         <CardContent className="flex items-center justify-between gap-3 p-4">
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
+            <p className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Distrito local {casilla.distritoLocal}
+            </p>
+            <div className="mt-0.5 flex flex-wrap items-center gap-2">
               <span className="font-semibold text-foreground">Sección {casilla.seccion}</span>
-              <Badge variant="secondary">{casilla.tipoCasilla}</Badge>
+              <Badge variant="accent">{formatTipoCasilla(casilla.tipoCasilla)}</Badge>
             </div>
             <p className="mt-1 flex items-center gap-1 truncate text-sm text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 shrink-0" />
