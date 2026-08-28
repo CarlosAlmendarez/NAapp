@@ -3,7 +3,7 @@
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireUserOrThrow, invalidarSesionesDe } from "@/lib/auth-helpers";
+import { requireUserOrThrow, requireRole, invalidarSesionesDe } from "@/lib/auth-helpers";
 import { cambiarPasswordSchema } from "@/lib/validations/auth";
 import { registrarAuditoria } from "@/lib/audit";
 import { ejecutarAccion, type ActionResult } from "@/lib/action-result";
@@ -11,10 +11,16 @@ import { signOut } from "@/auth";
 
 const BCRYPT_ROUNDS = 12;
 
-/** Cambio de contraseña por el propio usuario (requiere la contraseña actual). */
+/**
+ * Cambio de contraseña por el propio usuario (requiere la contraseña
+ * actual). Restringido al Administrador general: los demás roles no
+ * pueden rotar su propia contraseña desde la app — el Administrador
+ * general se las restablece vía `resetearPasswordUsuario`.
+ */
 export async function cambiarMiPassword(formData: unknown): Promise<ActionResult<undefined>> {
   return ejecutarAccion(async () => {
     const usuario = await requireUserOrThrow();
+    requireRole(usuario, ["ADMIN_GENERAL"]);
     const datos = cambiarPasswordSchema.parse(formData);
 
     const registro = await prisma.usuario.findUniqueOrThrow({ where: { id: usuario.id } });

@@ -35,12 +35,14 @@ export function Header({ usuario }: { usuario: UsuarioAutenticado }) {
               <p className="font-normal text-muted-foreground">{ROL_LABELS[usuario.rol]}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/cuenta/password">
-                <KeyRound className="mr-2 h-4 w-4" />
-                Cambiar contraseña
-              </Link>
-            </DropdownMenuItem>
+            {usuario.rol === "ADMIN_GENERAL" && (
+              <DropdownMenuItem asChild>
+                <Link href="/cuenta/password">
+                  <KeyRound className="mr-2 h-4 w-4" />
+                  Cambiar contraseña
+                </Link>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem asChild>
               <form action={cerrarTodasMisSesiones} className="w-full">
                 <button type="submit" className="flex w-full items-center">
