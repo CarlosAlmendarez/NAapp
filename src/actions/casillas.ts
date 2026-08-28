@@ -8,11 +8,15 @@ import { registrarAuditoria } from "@/lib/audit";
 import { ejecutarAccion, type ActionResult } from "@/lib/action-result";
 
 /**
- * Crear/editar casillas: Admin general, Admin de casillas y Representante
- * General (RG). El capturador nunca puede crear ni editar la casilla en
- * sí, solo capturar RC/asistentes dentro de su localidad; el RG solo
- * puede crear/editar/eliminar la casilla, nunca capturar RC ni asistentes
- * (ver actions/representantes.ts y actions/asistentes.ts).
+ * Crear casillas: Admin general, Admin de casillas y Representante
+ * General (RG). El capturador nunca puede crear la casilla en sí, solo
+ * capturar RC dentro de su localidad; el RG solo administra el catálogo
+ * de casillas, nunca captura RC (ver actions/representantes.ts).
+ *
+ * Editar y eliminar casillas están deshabilitados a propósito (para
+ * ninguna cuenta, incluida Admin general) para proteger el catálogo
+ * oficial contra ediciones o borrados accidentales — ver
+ * `actualizarCasilla` y `eliminarCasilla` abajo.
  */
 export async function crearCasilla(formData: unknown): Promise<ActionResult<{ id: string }>> {
   return ejecutarAccion(async () => {
@@ -45,72 +49,32 @@ export async function crearCasilla(formData: unknown): Promise<ActionResult<{ id
   });
 }
 
+/**
+ * Deshabilitada a propósito: editar el catálogo de casillas está apagado
+ * para nadie (incluida Admin general) pueda modificar los registros
+ * oficiales por error. No hay ruta ni botón en la UI que llegue aquí; este
+ * guardado extra es la protección real en servidor.
+ */
 export async function actualizarCasilla(
-  id: string,
-  formData: unknown
+  _id: string,
+  _formData: unknown
 ): Promise<ActionResult<{ id: string }>> {
   return ejecutarAccion(async () => {
-    const usuario = await requireUserOrThrow();
-    requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS", "REPRESENTANTE_GENERAL"]);
-
-    const datos = casillaSchema.parse(formData);
-
-    const actual = await prisma.casilla.findUnique({ where: { id } });
-    if (!actual) throw new Error("La casilla no existe.");
-
-    if (datos.seccion !== actual.seccion || datos.tipoCasilla !== actual.tipoCasilla) {
-      const duplicada = await prisma.casilla.findFirst({
-        where: {
-          seccion: datos.seccion,
-          tipoCasilla: datos.tipoCasilla,
-          NOT: { id },
-        },
-      });
-      if (duplicada) {
-        throw new Error(`Ya existe otra casilla con sección ${datos.seccion} y tipo ${datos.tipoCasilla}.`);
-      }
-    }
-
-    const casilla = await prisma.casilla.update({
-      where: { id },
-      data: { ...datos, updatedById: usuario.id },
-    });
-
-    await registrarAuditoria({
-      usuarioId: usuario.id,
-      accion: "ACTUALIZAR",
-      entidad: "Casilla",
-      entidadId: casilla.id,
-      datosAntes: actual,
-      datosDespues: casilla,
-    });
-
-    revalidatePath("/casillas");
-    revalidatePath(`/casillas/${id}`);
-    return { id: casilla.id };
+    await requireUserOrThrow();
+    throw new Error("Editar casillas está deshabilitado para proteger el catálogo oficial.");
   });
 }
 
-export async function eliminarCasilla(id: string): Promise<ActionResult<{ id: string }>> {
+/**
+ * Deshabilitada a propósito: eliminar casillas está apagado para nadie
+ * (incluida Admin general), para evitar que se borren registros del
+ * catálogo oficial. No hay ruta ni botón en la UI que llegue aquí; este
+ * guardado extra es la protección real en servidor.
+ */
+export async function eliminarCasilla(_id: string): Promise<ActionResult<{ id: string }>> {
   return ejecutarAccion(async () => {
-    const usuario = await requireUserOrThrow();
-    requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS", "REPRESENTANTE_GENERAL"]);
-
-    const actual = await prisma.casilla.findUnique({ where: { id } });
-    if (!actual) throw new Error("La casilla no existe.");
-
-    await prisma.casilla.delete({ where: { id } });
-
-    await registrarAuditoria({
-      usuarioId: usuario.id,
-      accion: "ELIMINAR",
-      entidad: "Casilla",
-      entidadId: id,
-      datosAntes: actual,
-    });
-
-    revalidatePath("/casillas");
-    return { id };
+    await requireUserOrThrow();
+    throw new Error("Eliminar casillas está deshabilitado para proteger el catálogo oficial.");
   });
 }
 

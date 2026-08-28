@@ -47,7 +47,6 @@ export async function listarCasillas(usuario: UsuarioAutenticado, filtros: Filtr
       take: PAGE_SIZE,
       include: {
         representantes: { select: { tipo: true } },
-        _count: { select: { asistentes: true } },
       },
     }),
   ]);

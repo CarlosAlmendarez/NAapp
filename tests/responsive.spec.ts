@@ -88,26 +88,34 @@ for (const [dispositivo, viewport] of Object.entries(VIEWPORTS)) {
       await expectSinScrollHorizontal(page);
     });
 
-    test("detalle de casilla: encabezado, distrito y pestañas visibles", async ({ page }) => {
+    test("detalle de casilla: encabezado en negritas y RC visibles, sin editar/eliminar", async ({
+      page,
+    }) => {
       await login(page, USUARIOS.admin);
       await page.goto("/casillas");
       await page.getByText(/^Sección \d+$/).first().click();
       await page.waitForURL(/\/casillas\/[a-z0-9]+$/);
-      await expect(page.getByText(/^Distrito local /).first()).toBeVisible();
+      // "Distrito local ..." es el encabezado en negritas; "Sección N" es
+      // el texto secundario debajo.
+      await expect(page.getByRole("heading", { name: /^Distrito local /i })).toBeVisible();
       await expect(page.getByText("Tipo de Casilla:")).toBeVisible();
       await expect(page.getByText("Distrito federal")).toHaveCount(0);
-      await expect(page.getByRole("tab", { name: "Representantes" })).toBeVisible();
-      await expect(page.getByRole("tab", { name: "Asistentes electorales" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Representantes de Casilla" })).toBeVisible();
+      await expect(page.getByText("RC Propietario")).toBeVisible();
+      await expect(page.getByText("RC Suplente")).toBeVisible();
+      // Editar/eliminar la casilla está deshabilitado para todos.
+      await expect(page.getByRole("link", { name: "Editar" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Eliminar" })).toHaveCount(0);
       await expectSinScrollHorizontal(page);
     });
 
-    test("detalle de casilla (RG): sin pestañas de RC/asistentes", async ({ page }) => {
+    test("detalle de casilla (RG): sin sección de Representantes de Casilla", async ({ page }) => {
       await login(page, USUARIOS.rg);
       await page.goto("/casillas");
       await page.getByText(/^Sección \d+$/).first().click();
       await page.waitForURL(/\/casillas\/[a-z0-9]+$/);
-      await expect(page.getByRole("link", { name: "Editar" })).toBeVisible();
-      await expect(page.getByRole("tab", { name: "Representantes" })).toHaveCount(0);
+      await expect(page.getByRole("heading", { name: /^Distrito local /i })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Representantes de Casilla" })).toHaveCount(0);
       await expectSinScrollHorizontal(page);
     });
 

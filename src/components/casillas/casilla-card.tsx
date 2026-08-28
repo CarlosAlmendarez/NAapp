@@ -13,7 +13,6 @@ type CasillaResumen = {
   coloniaLocalidad: string;
   ubicacion: string;
   representantes: { tipo: "PROPIETARIO" | "SUPLENTE" }[];
-  _count: { asistentes: number };
 };
 
 export function CasillaCard({ casilla }: { casilla: CasillaResumen }) {
@@ -25,10 +24,10 @@ export function CasillaCard({ casilla }: { casilla: CasillaResumen }) {
       <Card className="transition-colors hover:border-primary">
         <CardContent className="flex items-center justify-between gap-3 p-4">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="truncate font-semibold text-foreground">
               Distrito local {casilla.distritoLocal}
             </p>
-            <p className="mt-0.5 font-semibold text-foreground">Sección {casilla.seccion}</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">Sección {casilla.seccion}</p>
             <div className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
               Tipo de Casilla:
               <Badge variant="accent">{formatTipoCasilla(casilla.tipoCasilla)}</Badge>
@@ -45,9 +44,6 @@ export function CasillaCard({ casilla }: { casilla: CasillaResumen }) {
               <Badge variant={tieneSuplente ? "success" : "outline"}>
                 RC suplente {tieneSuplente ? "✓" : "pendiente"}
               </Badge>
-              {casilla._count.asistentes > 0 && (
-                <Badge variant="secondary">{casilla._count.asistentes} asistente(s)</Badge>
-              )}
             </div>
           </div>
           <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
