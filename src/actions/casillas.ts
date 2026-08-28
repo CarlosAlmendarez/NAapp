@@ -121,6 +121,6 @@ export async function obtenerCasillaConAccesoOrThrow(casillaId: string) {
   const usuario = await requireUserOrThrow();
   const casilla = await prisma.casilla.findUnique({ where: { id: casillaId } });
   if (!casilla) throw new Error("La casilla no existe.");
-  requireLocalidadAccess(usuario, casilla.municipio);
+  requireLocalidadAccess(usuario, casilla);
   return { usuario, casilla };
 }

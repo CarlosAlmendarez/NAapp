@@ -28,6 +28,17 @@ enum TipoRepresentante {
   SUPLENTE
 }
 
+// Unidad geográfica/política por la que se puede acotar el acceso de un
+// capturador. Un municipio grande puede estar repartido en varios
+// distritos locales (ej. San Luis Potosí capital: distritos 4 a 8;
+// Soledad de Graciano Sánchez: 9 y 10) — por eso son dos dimensiones
+// independientes y no una jerarquía simple de "distrito contiene
+// municipios".
+enum TipoLocalidad {
+  MUNICIPIO
+  DISTRITO_LOCAL
+}
+
 // Catálogo de municipios del estado. Se carga vía `prisma/seed.ts` a partir
 // de `prisma/data/municipios.json` (ver README para reemplazar el archivo
 // de ejemplo por el catálogo oficial completo de 58 municipios).
@@ -37,6 +48,16 @@ model Municipio {
   clave  String?
 
   @@map("municipios")
+}
+
+// Catálogo de distritos locales del estado (ej. "12. CARDENAS"), tal cual
+// aparecen en el padrón oficial de casillas. Se carga vía `prisma/seed.ts`
+// a partir de `prisma/data/distritos-locales.json`.
+model DistritoLocal {
+  id     String  @id @default(cuid())
+  nombre String  @unique
+
+  @@map("distritos_locales")
 }
 
 // ---------------------------------------------------------------------------
@@ -78,19 +99,23 @@ model Usuario {
   @@map("usuarios")
 }
 
-// Localidades/municipios asignados a un capturador. Solo se usa (y se
-// exige que exista al menos uno) cuando Usuario.rol = CAPTURADOR.
+// Localidades asignadas a un capturador — cada fila es un municipio O un
+// distrito local (ver TipoLocalidad). Solo se usa (y se exige que exista
+// al menos una) cuando Usuario.rol = CAPTURADOR. El filtro de acceso
+// (src/lib/auth-helpers.ts) hace un OR entre Casilla.municipio y
+// Casilla.distritoLocal contra estas asignaciones.
 model UsuarioLocalidad {
-  id        String @id @default(cuid())
+  id        String        @id @default(cuid())
   usuarioId String
-  municipio String
+  tipo      TipoLocalidad
+  valor     String
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   asignadoEn DateTime @default(now())
 
-  @@unique([usuarioId, municipio])
-  @@index([municipio])
+  @@unique([usuarioId, tipo, valor])
+  @@index([tipo, valor])
   @@map("usuario_localidades")
 }
 

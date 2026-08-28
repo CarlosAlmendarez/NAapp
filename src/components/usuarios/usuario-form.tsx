@@ -17,7 +17,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { LocalidadPickerConLabel } from "@/components/usuarios/localidad-picker";
+import { LocalidadPickerConLabel, type LocalidadAsignada } from "@/components/usuarios/localidad-picker";
 import { ROL_OPTIONS } from "@/lib/roles";
 
 type UsuarioExistente = {
@@ -26,14 +26,16 @@ type UsuarioExistente = {
   correo: string;
   rol: Rol;
   activo: boolean;
-  localidades: string[];
+  localidades: LocalidadAsignada[];
 };
 
 export function UsuarioForm({
   municipios,
+  distritosLocales,
   usuario,
 }: {
   municipios: string[];
+  distritosLocales: string[];
   usuario?: UsuarioExistente;
 }) {
   const router = useRouter();
@@ -42,7 +44,7 @@ export function UsuarioForm({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [rol, setRol] = useState<Rol>(usuario?.rol ?? "CAPTURADOR");
   const [activo, setActivo] = useState(usuario?.activo ?? true);
-  const [localidades, setLocalidades] = useState<string[]>(usuario?.localidades ?? []);
+  const [localidades, setLocalidades] = useState<LocalidadAsignada[]>(usuario?.localidades ?? []);
 
   function onSubmit(formData: FormData) {
     setError(null);
@@ -124,6 +126,7 @@ export function UsuarioForm({
       {rol === "CAPTURADOR" && (
         <LocalidadPickerConLabel
           municipios={municipios}
+          distritosLocales={distritosLocales}
           seleccionados={localidades}
           onChange={setLocalidades}
         />

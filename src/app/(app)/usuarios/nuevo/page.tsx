@@ -8,7 +8,10 @@ export default async function NuevoUsuarioPage() {
   const usuario = await requireUser();
   if (usuario.rol !== "ADMIN_GENERAL") redirect("/dashboard");
 
-  const municipios = await prisma.municipio.findMany({ orderBy: { nombre: "asc" } });
+  const [municipios, distritos] = await Promise.all([
+    prisma.municipio.findMany({ orderBy: { nombre: "asc" } }),
+    prisma.distritoLocal.findMany({ orderBy: { nombre: "asc" } }),
+  ]);
 
   return (
     <Card className="mx-auto max-w-xl">
@@ -16,7 +19,10 @@ export default async function NuevoUsuarioPage() {
         <CardTitle>Nuevo usuario</CardTitle>
       </CardHeader>
       <CardContent>
-        <UsuarioForm municipios={municipios.map((m) => m.nombre)} />
+        <UsuarioForm
+          municipios={municipios.map((m) => m.nombre)}
+          distritosLocales={distritos.map((d) => d.nombre)}
+        />
       </CardContent>
     </Card>
   );

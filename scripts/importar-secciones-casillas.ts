@@ -3,8 +3,9 @@
  * distritos, municipios y casillas de San Luis Potosí) a los archivos JSON
  * que consume `prisma/seed.ts`:
  *
- *   prisma/data/municipios.json   — catálogo de municipios (columna MUNICIPIO)
- *   prisma/data/casillas.json     — catálogo completo de casillas
+ *   prisma/data/municipios.json         — catálogo de municipios (columna MUNICIPIO)
+ *   prisma/data/distritos-locales.json  — catálogo de distritos locales (columna DISTRITO LOCAL)
+ *   prisma/data/casillas.json           — catálogo completo de casillas
  *
  * Uso:
  *   npx tsx scripts/importar-secciones-casillas.ts [ruta-al-xlsx]
@@ -63,6 +64,7 @@ function main() {
   const datos = filas.slice(FILAS_ENCABEZADO);
 
   const municipios = new Set<string>();
+  const distritosLocales = new Set<string>();
   const casillasPorClave = new Map<string, FilaCasilla>();
   let filasVacias = 0;
   let filasConTipoInvalido = 0;
@@ -104,6 +106,7 @@ function main() {
     }
 
     municipios.add(municipio);
+    if (distritoLocal) distritosLocales.add(distritoLocal);
 
     const codigoPostal = /^\d{5}$/.test(codigoPostalTexto) ? codigoPostalTexto : null;
 
@@ -133,12 +136,18 @@ function main() {
     casillasPorClave.set(clave, registro);
   }
 
+  const numeroInicial = (texto: string) => parseInt(texto, 10) || 0;
+
   const municipiosOrdenados = [...municipios].sort((a, b) => a.localeCompare(b));
+  const distritosOrdenados = [...distritosLocales].sort(
+    (a, b) => numeroInicial(a) - numeroInicial(b)
+  );
   const casillas = [...casillasPorClave.values()].sort(
     (a, b) => a.municipio.localeCompare(b.municipio) || a.seccion - b.seccion
   );
 
   const rutaMunicipios = path.join(__dirname, "..", "prisma", "data", "municipios.json");
+  const rutaDistritos = path.join(__dirname, "..", "prisma", "data", "distritos-locales.json");
   const rutaCasillas = path.join(__dirname, "..", "prisma", "data", "casillas.json");
 
   writeFileSync(
@@ -149,9 +158,18 @@ function main() {
       2
     ) + "\n"
   );
+  writeFileSync(
+    rutaDistritos,
+    JSON.stringify(
+      distritosOrdenados.map((nombre) => ({ nombre })),
+      null,
+      2
+    ) + "\n"
+  );
   writeFileSync(rutaCasillas, JSON.stringify(casillas, null, 2) + "\n");
 
   console.log(`\n✔ ${municipiosOrdenados.length} municipio(s) → ${rutaMunicipios}`);
+  console.log(`✔ ${distritosOrdenados.length} distrito(s) local(es) → ${rutaDistritos}`);
   console.log(`✔ ${casillas.length} casilla(s) → ${rutaCasillas}`);
   console.log(`  Filas vacías ignoradas: ${filasVacias}`);
   console.log(`  Filas con tipo de casilla no reconocido: ${filasConTipoInvalido}`);

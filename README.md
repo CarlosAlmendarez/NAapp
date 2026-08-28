@@ -123,6 +123,35 @@ vuelta a cargar solo un par de casillas de ejemplo desde
 `prisma/data/municipios.sample.json`, para poder probar el flujo sin el
 archivo real.
 
+## 4.1 Usuarios capturadores por distrito local
+
+El acceso de un Capturador se puede asignar por **municipio** y/o por
+**distrito local** (dos dimensiones independientes: un municipio grande
+puede estar repartido en varios distritos — San Luis Potosí capital en los
+distritos 4 a 8, Soledad de Graciano Sánchez en el 9 y 10 — así que el
+sistema filtra las casillas por `OR(municipio asignado, distrito local
+asignado)`, nunca asumiendo que un distrito equivale a un conjunto fijo de
+municipios).
+
+Para crear un usuario Capturador por cada uno de los 15 distritos locales
+(correo `distrito{N}@nuevaalianzaslp.org`, contraseña generada
+automáticamente):
+
+```bash
+npx tsx scripts/crear-usuarios-por-distrito.ts
+```
+
+Es idempotente: si el usuario ya existe no le toca la contraseña ni
+duplica su asignación. Las contraseñas nuevas se guardan en
+`credenciales-distritos.csv` en la raíz (no se sube a git — ver
+`.gitignore`); repártelas por un canal seguro y borra el archivo después.
+Cada capturador debe cambiar su contraseña en su primer login.
+
+Para asignar un municipio y/o distrito local a un usuario individual desde
+la UI, usa "Usuarios → Nuevo/Editar" — el selector de localidad tiene una
+pestaña para municipios y otra para distritos locales; se pueden combinar
+ambas para un mismo usuario si hace falta.
+
 ## 5. Desarrollo local
 
 ```bash

@@ -36,7 +36,7 @@ export async function crearUsuario(formData: unknown): Promise<ActionResult<{ id
         creadoPorId: admin.id,
         localidades:
           datos.rol === "CAPTURADOR"
-            ? { create: datos.localidades.map((municipio) => ({ municipio })) }
+            ? { create: datos.localidades.map((l) => ({ tipo: l.tipo, valor: l.valor })) }
             : undefined,
       },
     });
@@ -87,7 +87,11 @@ export async function actualizarUsuario(formData: unknown): Promise<ActionResult
       await tx.usuarioLocalidad.deleteMany({ where: { usuarioId: datos.id } });
       if (datos.rol === "CAPTURADOR" && datos.localidades.length > 0) {
         await tx.usuarioLocalidad.createMany({
-          data: datos.localidades.map((municipio) => ({ usuarioId: datos.id, municipio })),
+          data: datos.localidades.map((l) => ({
+            usuarioId: datos.id,
+            tipo: l.tipo,
+            valor: l.valor,
+          })),
         });
       }
 

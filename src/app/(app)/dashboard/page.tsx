@@ -5,6 +5,7 @@ import { StatsCards } from "@/components/dashboard/stats-cards";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ROL_LABELS } from "@/lib/roles";
+import { etiquetasLocalidades } from "@/lib/localidad";
 
 export default async function DashboardPage() {
   const usuario = await requireUser();
@@ -17,7 +18,7 @@ export default async function DashboardPage() {
         <p className="text-sm text-muted-foreground">
           {ROL_LABELS[usuario.rol]}
           {usuario.rol === "CAPTURADOR" && usuario.localidades.length > 0 && (
-            <> · Localidades asignadas: {usuario.localidades.join(", ")}</>
+            <> · Localidades asignadas: {etiquetasLocalidades(usuario.localidades)}</>
           )}
         </p>
       </div>

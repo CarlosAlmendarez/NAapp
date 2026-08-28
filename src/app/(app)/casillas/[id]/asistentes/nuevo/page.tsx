@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireUser, tieneAccesoALocalidad } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { AsistenteForm } from "@/components/casillas/asistente-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,7 @@ export default async function NuevoAsistentePage({
 
   const casilla = await prisma.casilla.findUnique({ where: { id } });
   if (!casilla) notFound();
-  if (usuario.rol === "CAPTURADOR" && !usuario.localidades.includes(casilla.municipio)) {
+  if (!tieneAccesoALocalidad(usuario, casilla)) {
     notFound();
   }
 

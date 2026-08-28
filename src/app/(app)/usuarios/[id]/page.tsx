@@ -15,9 +15,10 @@ export default async function EditarUsuarioPage({
   if (admin.rol !== "ADMIN_GENERAL") redirect("/dashboard");
 
   const { id } = await params;
-  const [usuarioObjetivo, municipios] = await Promise.all([
+  const [usuarioObjetivo, municipios, distritos] = await Promise.all([
     prisma.usuario.findUnique({ where: { id }, include: { localidades: true } }),
     prisma.municipio.findMany({ orderBy: { nombre: "asc" } }),
+    prisma.distritoLocal.findMany({ orderBy: { nombre: "asc" } }),
   ]);
 
   if (!usuarioObjetivo) notFound();
@@ -31,13 +32,14 @@ export default async function EditarUsuarioPage({
         <CardContent>
           <UsuarioForm
             municipios={municipios.map((m) => m.nombre)}
+            distritosLocales={distritos.map((d) => d.nombre)}
             usuario={{
               id: usuarioObjetivo.id,
               nombre: usuarioObjetivo.nombre,
               correo: usuarioObjetivo.correo,
               rol: usuarioObjetivo.rol,
               activo: usuarioObjetivo.activo,
-              localidades: usuarioObjetivo.localidades.map((l) => l.municipio),
+              localidades: usuarioObjetivo.localidades.map((l) => ({ tipo: l.tipo, valor: l.valor })),
             }}
           />
         </CardContent>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil, Plus, MapPin } from "lucide-react";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireUser, tieneAccesoALocalidad } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,12 +29,9 @@ export default async function CasillaDetallePage({
 
   if (!casilla) notFound();
 
-  // Un capturador sin acceso a este municipio no debe ni enterarse de que
-  // la casilla existe.
-  if (
-    usuario.rol === "CAPTURADOR" &&
-    !usuario.localidades.includes(casilla.municipio)
-  ) {
+  // Un capturador sin acceso a este municipio/distrito no debe ni
+  // enterarse de que la casilla existe.
+  if (!tieneAccesoALocalidad(usuario, casilla)) {
     notFound();
   }
 

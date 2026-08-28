@@ -14,6 +14,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { ROL_LABELS } from "@/lib/roles";
+import { etiquetasLocalidades } from "@/lib/localidad";
 
 export default async function UsuariosPage() {
   const usuario = await requireUser();
@@ -60,7 +61,7 @@ export default async function UsuariosPage() {
               <TableCell className="text-muted-foreground">{u.correo}</TableCell>
               <TableCell>{ROL_LABELS[u.rol]}</TableCell>
               <TableCell className="text-muted-foreground">
-                {u.localidades.length > 0 ? u.localidades.map((l) => l.municipio).join(", ") : "—"}
+                {etiquetasLocalidades(u.localidades)}
               </TableCell>
               <TableCell>
                 <Badge variant={u.activo ? "success" : "outline"}>

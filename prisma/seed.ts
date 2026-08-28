@@ -37,6 +37,24 @@ async function seedMunicipios() {
   return municipios;
 }
 
+function cargarDistritosLocales(): { nombre: string }[] {
+  const ruta = path.join(__dirname, "data", "distritos-locales.json");
+  if (!existsSync(ruta)) return [];
+  return JSON.parse(readFileSync(ruta, "utf-8"));
+}
+
+async function seedDistritosLocales() {
+  const distritos = cargarDistritosLocales();
+  for (const d of distritos) {
+    await prisma.distritoLocal.upsert({
+      where: { nombre: d.nombre },
+      update: {},
+      create: { nombre: d.nombre },
+    });
+  }
+  console.log(`✔ ${distritos.length} distrito(s) local(es) cargado(s).`);
+}
+
 async function seedAdminGeneral() {
   const nombre = process.env.SEED_ADMIN_NOMBRE;
   const correo = process.env.SEED_ADMIN_CORREO?.trim().toLowerCase();
@@ -186,6 +204,7 @@ async function seedCasillasDeEjemplo(municipios: MunicipioSeed[]) {
 
 async function main() {
   const municipios = await seedMunicipios();
+  await seedDistritosLocales();
   await seedAdminGeneral();
 
   const seCargoElCatalogoReal = await seedCasillasReales();

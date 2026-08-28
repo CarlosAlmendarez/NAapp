@@ -3,16 +3,21 @@ import { passwordSchema } from "@/lib/validations/auth";
 
 export const rolSchema = z.enum(["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR"]);
 
+export const localidadAsignadaSchema = z.object({
+  tipo: z.enum(["MUNICIPIO", "DISTRITO_LOCAL"]),
+  valor: z.string().trim().min(1),
+});
+
 export const crearUsuarioSchema = z
   .object({
     nombre: z.string().trim().min(1, "El nombre es obligatorio.").max(150),
     correo: z.string().trim().toLowerCase().email("Correo inválido."),
     password: passwordSchema,
     rol: rolSchema,
-    localidades: z.array(z.string().trim().min(1)).default([]),
+    localidades: z.array(localidadAsignadaSchema).default([]),
   })
   .refine((data) => data.rol !== "CAPTURADOR" || data.localidades.length > 0, {
-    message: "Un capturador debe tener al menos una localidad/municipio asignado.",
+    message: "Un capturador debe tener al menos un municipio o distrito local asignado.",
     path: ["localidades"],
   });
 
@@ -25,10 +30,10 @@ export const editarUsuarioSchema = z
     correo: z.string().trim().toLowerCase().email("Correo inválido."),
     rol: rolSchema,
     activo: z.boolean(),
-    localidades: z.array(z.string().trim().min(1)).default([]),
+    localidades: z.array(localidadAsignadaSchema).default([]),
   })
   .refine((data) => data.rol !== "CAPTURADOR" || data.localidades.length > 0, {
-    message: "Un capturador debe tener al menos una localidad/municipio asignado.",
+    message: "Un capturador debe tener al menos un municipio o distrito local asignado.",
     path: ["localidades"],
   });
 

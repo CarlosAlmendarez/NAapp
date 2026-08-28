@@ -14,27 +14,29 @@ export type FiltrosCasillas = {
 export async function listarCasillas(usuario: UsuarioAutenticado, filtros: FiltrosCasillas) {
   const page = Math.max(1, filtros.page ?? 1);
 
-  const where: Prisma.CasillaWhereInput = { ...filtroCasillasPorRol(usuario) };
+  // Se combinan como cláusulas AND independientes (no reasignar `where.OR`
+  // directamente): el filtro de alcance por rol ya puede traer su propio
+  // OR (municipio o distrito local asignado), y la búsqueda de texto trae
+  // el suyo — pisar uno con el otro reabriría el acceso fuera de alcance.
+  const and: Prisma.CasillaWhereInput[] = [filtroCasillasPorRol(usuario)];
 
-  // El municipio elegido en el filtro debe seguir respetando el alcance
-  // del usuario: si es capturador, solo puede filtrar dentro de lo suyo.
   if (filtros.municipio) {
-    if (usuario.rol === "CAPTURADOR" && !usuario.localidades.includes(filtros.municipio)) {
-      where.municipio = "__ninguna__";
-    } else {
-      where.municipio = filtros.municipio;
-    }
+    and.push({ municipio: filtros.municipio });
   }
 
   if (filtros.busqueda) {
     const num = Number(filtros.busqueda);
-    where.OR = [
-      { coloniaLocalidad: { contains: filtros.busqueda, mode: "insensitive" } },
-      { ubicacion: { contains: filtros.busqueda, mode: "insensitive" } },
-      { domicilio: { contains: filtros.busqueda, mode: "insensitive" } },
-      ...(Number.isFinite(num) && filtros.busqueda.trim() !== "" ? [{ seccion: num }] : []),
-    ];
+    and.push({
+      OR: [
+        { coloniaLocalidad: { contains: filtros.busqueda, mode: "insensitive" } },
+        { ubicacion: { contains: filtros.busqueda, mode: "insensitive" } },
+        { domicilio: { contains: filtros.busqueda, mode: "insensitive" } },
+        ...(Number.isFinite(num) && filtros.busqueda.trim() !== "" ? [{ seccion: num }] : []),
+      ],
+    });
   }
+
+  const where: Prisma.CasillaWhereInput = { AND: and };
 
   const [total, casillas] = await Promise.all([
     prisma.casilla.count({ where }),
@@ -58,11 +60,24 @@ export async function listarCasillas(usuario: UsuarioAutenticado, filtros: Filtr
   };
 }
 
-/** Municipios disponibles para el selector de filtro, según el alcance del usuario. */
+/**
+ * Municipios disponibles para el selector de filtro, según el alcance del
+ * usuario. Para un capturador se derivan consultando qué municipios
+ * realmente tienen casillas dentro de su alcance (municipios asignados
+ * directamente + municipios con casillas en sus distritos locales
+ * asignados) — así funciona igual sin importar si se le asignó acceso por
+ * municipio, por distrito, o ambos.
+ */
 export async function municipiosDisponibles(usuario: UsuarioAutenticado): Promise<string[]> {
-  if (usuario.rol === "CAPTURADOR") {
-    return [...usuario.localidades].sort((a, b) => a.localeCompare(b));
+  if (usuario.rol !== "CAPTURADOR") {
+    const municipios = await prisma.municipio.findMany({ orderBy: { nombre: "asc" } });
+    return municipios.map((m) => m.nombre);
   }
-  const municipios = await prisma.municipio.findMany({ orderBy: { nombre: "asc" } });
-  return municipios.map((m) => m.nombre);
+
+  const filas = await prisma.casilla.findMany({
+    where: filtroCasillasPorRol(usuario),
+    select: { municipio: true },
+    distinct: ["municipio"],
+  });
+  return filas.map((f) => f.municipio).sort((a, b) => a.localeCompare(b));
 }

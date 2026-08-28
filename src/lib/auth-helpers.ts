@@ -1,8 +1,10 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import type { Rol } from "@prisma/client";
+import type { Prisma, Rol } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+
+export type LocalidadAsignada = { tipo: "MUNICIPIO" | "DISTRITO_LOCAL"; valor: string };
 
 export type UsuarioAutenticado = {
   id: string;
@@ -10,9 +12,19 @@ export type UsuarioAutenticado = {
   correo: string;
   rol: Rol;
   activo: boolean;
-  /** Municipios asignados. Solo relevante cuando rol === "CAPTURADOR". */
-  localidades: string[];
+  /** Municipios y/o distritos locales asignados. Solo relevante cuando rol === "CAPTURADOR". */
+  localidades: LocalidadAsignada[];
 };
+
+/** Solo las localidades de tipo MUNICIPIO asignadas al usuario. */
+export function municipiosAsignados(usuario: UsuarioAutenticado): string[] {
+  return usuario.localidades.filter((l) => l.tipo === "MUNICIPIO").map((l) => l.valor);
+}
+
+/** Solo las localidades de tipo DISTRITO_LOCAL asignadas al usuario. */
+export function distritosAsignados(usuario: UsuarioAutenticado): string[] {
+  return usuario.localidades.filter((l) => l.tipo === "DISTRITO_LOCAL").map((l) => l.valor);
+}
 
 export class AutorizacionError extends Error {}
 
@@ -46,7 +58,7 @@ async function obtenerUsuarioValidoOrNull(): Promise<UsuarioAutenticado | null> 
     correo: usuario.correo,
     rol: usuario.rol,
     activo: usuario.activo,
-    localidades: usuario.localidades.map((l) => l.municipio),
+    localidades: usuario.localidades.map((l) => ({ tipo: l.tipo, valor: l.valor })),
   };
 }
 
@@ -74,24 +86,57 @@ export function requireRole(usuario: UsuarioAutenticado, roles: Rol[]): void {
   }
 }
 
+type CasillaGeografia = { municipio: string; distritoLocal: string };
+
 /**
- * Verifica que un capturador tenga asignado el municipio indicado.
- * Admin general y admin de casillas tienen acceso a todos los municipios.
+ * true si el usuario puede ver/editar una casilla, ya sea por tener
+ * asignado su municipio o su distrito local. Admin general y admin de
+ * casillas siempre tienen acceso. Un municipio grande puede estar
+ * repartido en varios distritos locales (ej. San Luis Potosí capital o
+ * Soledad de Graciano Sánchez), por eso se evalúan ambas dimensiones por
+ * separado en vez de asumir que un distrito equivale a un conjunto fijo
+ * de municipios.
  */
-export function requireLocalidadAccess(usuario: UsuarioAutenticado, municipio: string): void {
-  if (usuario.rol === "ADMIN_GENERAL" || usuario.rol === "ADMIN_CASILLAS") return;
-  if (!usuario.localidades.includes(municipio)) {
-    throw new AutorizacionError("No tienes acceso a casillas de este municipio.");
+export function tieneAccesoALocalidad(
+  usuario: UsuarioAutenticado,
+  casilla: CasillaGeografia
+): boolean {
+  if (usuario.rol === "ADMIN_GENERAL" || usuario.rol === "ADMIN_CASILLAS") return true;
+  return usuario.localidades.some(
+    (l) =>
+      (l.tipo === "MUNICIPIO" && l.valor === casilla.municipio) ||
+      (l.tipo === "DISTRITO_LOCAL" && l.valor === casilla.distritoLocal)
+  );
+}
+
+/** Igual que `tieneAccesoALocalidad`, pero lanza si no hay acceso. */
+export function requireLocalidadAccess(
+  usuario: UsuarioAutenticado,
+  casilla: CasillaGeografia
+): void {
+  if (!tieneAccesoALocalidad(usuario, casilla)) {
+    throw new AutorizacionError("No tienes acceso a casillas de esta localidad.");
   }
 }
 
 /** Filtro Prisma a aplicar en cualquier consulta de Casilla según el rol del usuario. */
-export function filtroCasillasPorRol(usuario: UsuarioAutenticado) {
+export function filtroCasillasPorRol(usuario: UsuarioAutenticado): Prisma.CasillaWhereInput {
   if (usuario.rol === "ADMIN_GENERAL" || usuario.rol === "ADMIN_CASILLAS") {
     return {};
   }
-  // Capturador sin localidades asignadas no debe ver ninguna casilla.
-  return { municipio: { in: usuario.localidades.length > 0 ? usuario.localidades : ["__ninguna__"] } };
+
+  const municipios = municipiosAsignados(usuario);
+  const distritos = distritosAsignados(usuario);
+
+  if (municipios.length === 0 && distritos.length === 0) {
+    // Capturador sin localidades asignadas no debe ver ninguna casilla.
+    return { id: "__ninguna__" };
+  }
+
+  const or: Prisma.CasillaWhereInput[] = [];
+  if (municipios.length > 0) or.push({ municipio: { in: municipios } });
+  if (distritos.length > 0) or.push({ distritoLocal: { in: distritos } });
+  return { OR: or };
 }
 
 /**
