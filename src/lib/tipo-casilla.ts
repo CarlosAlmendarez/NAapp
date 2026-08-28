@@ -24,3 +24,22 @@ export function formatTipoCasilla(tipo: string): string {
   // Formato no reconocido: se muestra tal cual en vez de fallar.
   return codigo;
 }
+
+export type VarianteTipoCasilla =
+  | "tipo-basica"
+  | "tipo-contigua"
+  | "tipo-especial"
+  | "tipo-extraordinaria";
+
+/**
+ * Variante de <Badge> según la categoría del tipo de casilla — un color
+ * distinto por categoría (antes todas se veían igual, en el mismo teal de
+ * acento).
+ */
+export function varianteTipoCasilla(tipo: string): VarianteTipoCasilla {
+  const codigo = tipo.trim().toUpperCase();
+  if (codigo.startsWith("C")) return "tipo-contigua";
+  if (codigo.startsWith("S")) return "tipo-especial";
+  if (codigo.startsWith("E")) return "tipo-extraordinaria";
+  return "tipo-basica";
+}

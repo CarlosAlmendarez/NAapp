@@ -14,6 +14,14 @@ const badgeVariants = cva(
         warning: "border-transparent bg-warning text-warning-foreground",
         destructive: "border-transparent bg-destructive text-destructive-foreground",
         outline: "border-border text-foreground",
+        // Un color por tipo de casilla (Básica/Contigua/Especial/
+        // Extraordinaria) — ver formatTipoCasilla/varianteTipoCasilla en
+        // src/lib/tipo-casilla.ts.
+        "tipo-basica": "border-transparent bg-tipo-basica text-tipo-basica-foreground",
+        "tipo-contigua": "border-transparent bg-tipo-contigua text-tipo-contigua-foreground",
+        "tipo-especial": "border-transparent bg-tipo-especial text-tipo-especial-foreground",
+        "tipo-extraordinaria":
+          "border-transparent bg-tipo-extraordinaria text-tipo-extraordinaria-foreground",
       },
     },
     defaultVariants: { variant: "default" },

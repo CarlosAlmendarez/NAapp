@@ -56,6 +56,25 @@
   --warning: #a8660a;
   --warning-foreground: #fff8ec;
 
+  /*
+   * Colores por tipo de casilla (Básica/Contigua/Especial/Extraordinaria):
+   * antes todas usaban el mismo teal de acento y se veían iguales a
+   * simple vista. Cada uno es lo bastante oscuro/saturado para usar texto
+   * blanco encima con buen contraste (todos >6.5:1, AAA para texto
+   * normal) — no el texto casi negro que se perdía sobre el teal claro.
+   */
+  --tipo-basica: #025159;
+  --tipo-basica-foreground: #ffffff;
+
+  --tipo-contigua: #1d4ed8;
+  --tipo-contigua-foreground: #ffffff;
+
+  --tipo-especial: #7e22ce;
+  --tipo-especial-foreground: #ffffff;
+
+  --tipo-extraordinaria: #92400e;
+  --tipo-extraordinaria-foreground: #ffffff;
+
   --border: #d8e3e0;
   --input: #d8e3e0;
   --ring: #025159;
@@ -93,6 +112,15 @@
 
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+
+  --color-tipo-basica: var(--tipo-basica);
+  --color-tipo-basica-foreground: var(--tipo-basica-foreground);
+  --color-tipo-contigua: var(--tipo-contigua);
+  --color-tipo-contigua-foreground: var(--tipo-contigua-foreground);
+  --color-tipo-especial: var(--tipo-especial);
+  --color-tipo-especial-foreground: var(--tipo-especial-foreground);
+  --color-tipo-extraordinaria: var(--tipo-extraordinaria);
+  --color-tipo-extraordinaria-foreground: var(--tipo-extraordinaria-foreground);
 
   --color-border: var(--border);
   --color-input: var(--input);

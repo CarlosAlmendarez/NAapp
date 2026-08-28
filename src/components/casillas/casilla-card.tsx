@@ -2,7 +2,7 @@ import Link from "next/link";
 import { MapPin, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatTipoCasilla } from "@/lib/tipo-casilla";
+import { formatTipoCasilla, varianteTipoCasilla } from "@/lib/tipo-casilla";
 
 type CasillaResumen = {
   id: string;
@@ -30,7 +30,9 @@ export function CasillaCard({ casilla }: { casilla: CasillaResumen }) {
             <p className="mt-0.5 text-sm text-muted-foreground">Sección {casilla.seccion}</p>
             <div className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
               Tipo de Casilla:
-              <Badge variant="accent">{formatTipoCasilla(casilla.tipoCasilla)}</Badge>
+              <Badge variant={varianteTipoCasilla(casilla.tipoCasilla)}>
+                {formatTipoCasilla(casilla.tipoCasilla)}
+              </Badge>
             </div>
             <p className="mt-1 flex items-center gap-1 truncate text-sm text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 shrink-0" />

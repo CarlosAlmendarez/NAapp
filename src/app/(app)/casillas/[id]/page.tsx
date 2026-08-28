@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { nombreCompleto, formatFecha } from "@/lib/utils";
-import { formatTipoCasilla } from "@/lib/tipo-casilla";
+import { formatTipoCasilla, varianteTipoCasilla } from "@/lib/tipo-casilla";
 
 export default async function CasillaDetallePage({
   params,
@@ -49,7 +49,9 @@ export default async function CasillaDetallePage({
             </p>
             <div className="mt-1 flex flex-wrap items-center gap-1.5 whitespace-nowrap text-sm font-normal text-muted-foreground">
               Tipo de Casilla:
-              <Badge variant="accent">{formatTipoCasilla(casilla.tipoCasilla)}</Badge>
+              <Badge variant={varianteTipoCasilla(casilla.tipoCasilla)}>
+                {formatTipoCasilla(casilla.tipoCasilla)}
+              </Badge>
             </div>
             <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
               <MapPin className="h-3.5 w-3.5" />
