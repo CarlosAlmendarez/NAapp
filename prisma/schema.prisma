@@ -1,0 +1,211 @@
+// Sistema de Captura Electoral — Nueva Alianza SLP
+// Prisma + PostgreSQL (Neon)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Pooled connection (pgbouncer) — usada en runtime por la app.
+  url       = env("DATABASE_URL")
+  // Conexión directa — usada solo por `prisma migrate` / `prisma db push`.
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Roles y catálogos
+// ---------------------------------------------------------------------------
+
+enum Rol {
+  ADMIN_GENERAL
+  ADMIN_CASILLAS
+  CAPTURADOR
+}
+
+enum TipoRepresentante {
+  PROPIETARIO
+  SUPLENTE
+}
+
+// Catálogo de municipios del estado. Se carga vía `prisma/seed.ts` a partir
+// de `prisma/data/municipios.json` (ver README para reemplazar el archivo
+// de ejemplo por el catálogo oficial completo de 58 municipios).
+model Municipio {
+  id     String  @id @default(cuid())
+  nombre String  @unique
+  clave  String?
+
+  @@map("municipios")
+}
+
+// ---------------------------------------------------------------------------
+// Usuarios y control de acceso
+// ---------------------------------------------------------------------------
+
+model Usuario {
+  id           String   @id @default(cuid())
+  nombre       String
+  correo       String   @unique
+  passwordHash String
+  rol          Rol
+  activo       Boolean  @default(true)
+
+  // Contador de versión de sesión. Se incrementa para invalidar de
+  // inmediato todos los tokens de sesión emitidos previamente (botón
+  // "Cerrar sesión en todos los dispositivos" y al desactivar la cuenta).
+  // Ver src/lib/auth-helpers.ts y src/auth.ts.
+  sessionVersion Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  localidades UsuarioLocalidad[]
+
+  casillasCreadas         Casilla[]              @relation("CasillaCreatedBy")
+  casillasActualizadas    Casilla[]              @relation("CasillaUpdatedBy")
+  representantesCapturados RepresentanteCasilla[] @relation("RepresentanteCapturadoPor")
+  representantesActualizados RepresentanteCasilla[] @relation("RepresentanteUpdatedBy")
+  asistentesCapturados     AsistenteElectoral[]   @relation("AsistenteCapturadoPor")
+  asistentesActualizados   AsistenteElectoral[]   @relation("AsistenteUpdatedBy")
+  usuariosCreados          Usuario[]              @relation("UsuarioCreatedBy")
+  creadoPor                Usuario?               @relation("UsuarioCreatedBy", fields: [creadoPorId], references: [id])
+  creadoPorId              String?
+
+  auditLogs AuditLog[]
+
+  @@index([rol])
+  @@map("usuarios")
+}
+
+// Localidades/municipios asignados a un capturador. Solo se usa (y se
+// exige que exista al menos uno) cuando Usuario.rol = CAPTURADOR.
+model UsuarioLocalidad {
+  id        String @id @default(cuid())
+  usuarioId String
+  municipio String
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  asignadoEn DateTime @default(now())
+
+  @@unique([usuarioId, municipio])
+  @@index([municipio])
+  @@map("usuario_localidades")
+}
+
+// ---------------------------------------------------------------------------
+// Casillas y captura
+// ---------------------------------------------------------------------------
+
+model Casilla {
+  id String @id @default(cuid())
+
+  distritoFederal  String
+  distritoLocal    String
+  municipio        String
+  seccion          Int
+  tipoCasilla      String
+  domicilio        String
+  coloniaLocalidad String
+  codigoPostal     String?
+  ubicacion        String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdById String?
+  updatedById String?
+  createdBy   Usuario? @relation("CasillaCreatedBy", fields: [createdById], references: [id])
+  updatedBy   Usuario? @relation("CasillaUpdatedBy", fields: [updatedById], references: [id])
+
+  representantes RepresentanteCasilla[]
+  asistentes     AsistenteElectoral[]
+
+  // Una sección puede tener varias casillas (básica, contigua 1, 2...) pero
+  // la combinación sección + tipo de casilla es única.
+  @@unique([seccion, tipoCasilla])
+  @@index([municipio])
+  @@index([coloniaLocalidad])
+  @@index([seccion])
+  @@map("casillas")
+}
+
+model RepresentanteCasilla {
+  id        String            @id @default(cuid())
+  casillaId String
+  casilla   Casilla           @relation(fields: [casillaId], references: [id], onDelete: Cascade)
+  tipo      TipoRepresentante
+
+  nombre            String
+  apellidoPaterno   String
+  apellidoMaterno   String?
+  // Cifrada en reposo con AES-256-GCM (ver src/lib/crypto.ts) por ser un
+  // identificador oficial de datos personales sensibles del INE.
+  claveElectorCifrada String
+  correoElectronico  String?
+  telefono           String?
+  propone            String
+
+  capturadoPorId String?
+  capturadoPor   Usuario?  @relation("RepresentanteCapturadoPor", fields: [capturadoPorId], references: [id])
+  capturadoEn    DateTime  @default(now())
+
+  updatedById String?
+  updatedBy   Usuario? @relation("RepresentanteUpdatedBy", fields: [updatedById], references: [id])
+  updatedAt   DateTime @updatedAt
+
+  // Como máximo un propietario y un suplente por casilla.
+  @@unique([casillaId, tipo])
+  @@index([casillaId])
+  @@map("representantes_casilla")
+}
+
+model AsistenteElectoral {
+  id        String  @id @default(cuid())
+  casillaId String
+  casilla   Casilla @relation(fields: [casillaId], references: [id], onDelete: Cascade)
+
+  nombre            String
+  apellidoPaterno   String
+  apellidoMaterno   String?
+  claveElectorCifrada String?
+  correoElectronico  String?
+  telefono           String?
+
+  capturadoPorId String?
+  capturadoPor   Usuario?  @relation("AsistenteCapturadoPor", fields: [capturadoPorId], references: [id])
+  capturadoEn    DateTime  @default(now())
+
+  updatedById String?
+  updatedBy   Usuario? @relation("AsistenteUpdatedBy", fields: [updatedById], references: [id])
+  updatedAt   DateTime @updatedAt
+
+  @@index([casillaId])
+  @@map("asistentes_electorales")
+}
+
+// ---------------------------------------------------------------------------
+// Auditoría
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  usuarioId String?
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  accion    String // ej. "CREAR", "ACTUALIZAR", "DESACTIVAR", "LOGIN_FALLIDO"
+  entidad   String // ej. "Casilla", "RepresentanteCasilla", "Usuario"
+  entidadId String?
+
+  datosAntes   Json?
+  datosDespues Json?
+
+  ip        String?
+  timestamp DateTime @default(now())
+
+  @@index([entidad, entidadId])
+  @@index([usuarioId])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
