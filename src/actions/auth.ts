@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUserOrThrow, requireRole, invalidarSesionesDe } from "@/lib/auth-helpers";
 import { cambiarPasswordSchema } from "@/lib/validations/auth";
 import { registrarAuditoria } from "@/lib/audit";
-import { ejecutarAccion, type ActionResult } from "@/lib/action-result";
+import { ejecutarAccion, AccionError, type ActionResult } from "@/lib/action-result";
 import { signOut } from "@/auth";
 
 const BCRYPT_ROUNDS = 12;
@@ -26,7 +26,7 @@ export async function cambiarMiPassword(formData: unknown): Promise<ActionResult
     const registro = await prisma.usuario.findUniqueOrThrow({ where: { id: usuario.id } });
     const actualValida = await bcrypt.compare(datos.passwordActual, registro.passwordHash);
     if (!actualValida) {
-      throw new Error("La contraseña actual es incorrecta.");
+      throw new AccionError("La contraseña actual es incorrecta.");
     }
 
     const passwordHash = await bcrypt.hash(datos.passwordNueva, BCRYPT_ROUNDS);

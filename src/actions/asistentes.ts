@@ -7,7 +7,7 @@ import { requireRole } from "@/lib/auth-helpers";
 import { asistenteSchema } from "@/lib/validations/persona";
 import { encryptField } from "@/lib/crypto";
 import { registrarAuditoria } from "@/lib/audit";
-import { ejecutarAccion, type ActionResult } from "@/lib/action-result";
+import { ejecutarAccion, AccionError, type ActionResult } from "@/lib/action-result";
 
 // El Representante General (RG) queda excluido a propósito de estas tres
 // acciones: solo administra el catálogo de casillas, nunca captura
@@ -61,7 +61,7 @@ export async function actualizarAsistente(
 
     const anterior = await prisma.asistenteElectoral.findUnique({ where: { id: asistenteId } });
     if (!anterior || anterior.casillaId !== casilla.id) {
-      throw new Error("El asistente electoral no existe en esta casilla.");
+      throw new AccionError("El asistente electoral no existe en esta casilla.");
     }
 
     const asistente = await prisma.asistenteElectoral.update({
@@ -101,7 +101,7 @@ export async function eliminarAsistente(
 
     const actual = await prisma.asistenteElectoral.findUnique({ where: { id: asistenteId } });
     if (!actual || actual.casillaId !== casilla.id) {
-      throw new Error("El asistente electoral no existe en esta casilla.");
+      throw new AccionError("El asistente electoral no existe en esta casilla.");
     }
 
     await prisma.asistenteElectoral.delete({ where: { id: asistenteId } });

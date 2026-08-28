@@ -18,7 +18,7 @@
     "test:db:setup": "npm run test:db:migrate && npm run test:db:seed && npm run test:db:seed:usuarios",
     "test:build": "dotenv -e .env.test -- next build",
     "test:start": "dotenv -e .env.test -- next start",
-    "test:responsive": "playwright test"
+    "test:e2e": "dotenv -e .env.test -- playwright test"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

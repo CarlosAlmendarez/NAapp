@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { obtenerUsuarioValidoOrNull } from "@/lib/auth-helpers";
 import { LoginForm } from "@/app/login/login-form";
 import { Logo } from "@/components/layout/logo";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,8 +15,10 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ motivo?: string }>;
 }) {
-  const session = await auth();
-  if (session?.user) {
+  // Debe ser la versión validada contra la BD (activo + sessionVersion),
+  // no `auth()` a secas — ver el comentario en obtenerUsuarioValidoOrNull.
+  const usuario = await obtenerUsuarioValidoOrNull();
+  if (usuario) {
     redirect("/dashboard");
   }
 

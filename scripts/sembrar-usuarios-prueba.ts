@@ -1,7 +1,7 @@
 /**
- * Crea el RG de prueba y los 15 capturadores por distrito con
- * contraseñas FIJAS y conocidas (las mismas que ya usan
- * tests/responsive.spec.ts y tests/logout.spec.ts) — a diferencia de
+ * Crea el RG de prueba, un Admin de casillas de prueba, y los 15
+ * capturadores por distrito, todos con contraseñas FIJAS y conocidas (las
+ * mismas que ya usan tests/*.spec.ts) — a diferencia de
  * scripts/crear-usuarios-por-distrito.ts (para producción, genera
  * contraseñas aleatorias y las escribe en credenciales-distritos.csv),
  * este script es solo para dejar la base de PRUEBA lista para correr la
@@ -19,6 +19,10 @@ const prisma = new PrismaClient();
 const BCRYPT_ROUNDS = 12;
 
 const RG = { correo: "rg@nuevaalianzaslp.org", password: "N6uNFK6kF#iMv#Ah" };
+const ADMIN_CASILLAS = {
+  correo: "admincasillas@nuevaalianzaslp.org",
+  password: "Tq8#mVn2XpLr9wZk",
+};
 
 // Mismas 15 contraseñas que prisma/data/distritos-locales.json (1..15) y
 // que ya están documentadas en credenciales.txt / credenciales-distritos.csv.
@@ -73,6 +77,13 @@ async function main() {
     correo: RG.correo,
     password: RG.password,
     rol: Rol.REPRESENTANTE_GENERAL,
+  });
+
+  await crearSiNoExiste({
+    nombre: "Administrador de Casillas (prueba)",
+    correo: ADMIN_CASILLAS.correo,
+    password: ADMIN_CASILLAS.password,
+    rol: Rol.ADMIN_CASILLAS,
   });
 
   const distritos = await prisma.distritoLocal.findMany();

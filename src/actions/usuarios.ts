@@ -10,7 +10,7 @@ import {
   resetearPasswordSchema,
 } from "@/lib/validations/usuario";
 import { registrarAuditoria } from "@/lib/audit";
-import { ejecutarAccion, type ActionResult } from "@/lib/action-result";
+import { ejecutarAccion, AccionError, type ActionResult } from "@/lib/action-result";
 
 const BCRYPT_ROUNDS = 12;
 
@@ -23,7 +23,7 @@ export async function crearUsuario(formData: unknown): Promise<ActionResult<{ id
     const datos = crearUsuarioSchema.parse(formData);
 
     const existente = await prisma.usuario.findUnique({ where: { correo: datos.correo } });
-    if (existente) throw new Error("Ya existe un usuario con ese correo.");
+    if (existente) throw new AccionError("Ya existe un usuario con ese correo.");
 
     const passwordHash = await bcrypt.hash(datos.password, BCRYPT_ROUNDS);
 
@@ -62,12 +62,12 @@ export async function actualizarUsuario(formData: unknown): Promise<ActionResult
     const datos = editarUsuarioSchema.parse(formData);
 
     const anterior = await prisma.usuario.findUnique({ where: { id: datos.id } });
-    if (!anterior) throw new Error("El usuario no existe.");
+    if (!anterior) throw new AccionError("El usuario no existe.");
 
     const correoEnUso = await prisma.usuario.findFirst({
       where: { correo: datos.correo, NOT: { id: datos.id } },
     });
-    if (correoEnUso) throw new Error("Ese correo ya está en uso por otro usuario.");
+    if (correoEnUso) throw new AccionError("Ese correo ya está en uso por otro usuario.");
 
     const seDesactivo = anterior.activo && !datos.activo;
 
@@ -120,7 +120,7 @@ export async function resetearPasswordUsuario(formData: unknown): Promise<Action
 
     const datos = resetearPasswordSchema.parse(formData);
     const usuario = await prisma.usuario.findUnique({ where: { id: datos.id } });
-    if (!usuario) throw new Error("El usuario no existe.");
+    if (!usuario) throw new AccionError("El usuario no existe.");
 
     const passwordHash = await bcrypt.hash(datos.passwordNueva, BCRYPT_ROUNDS);
 

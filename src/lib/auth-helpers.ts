@@ -62,7 +62,18 @@ export function puedeAdministrarCasillas(usuario: UsuarioAutenticado): boolean {
  * Credenciales solo admite sesiones JWT, no sesiones de base de datos
  * (ver comentario en src/auth.config.ts).
  */
-async function obtenerUsuarioValidoOrNull(): Promise<UsuarioAutenticado | null> {
+/**
+ * Exportada (a diferencia del resto de este archivo, de bajo nivel) para
+ * que /login pueda usarla también: decidir si ya hay una sesión válida
+ * para mandar a /dashboard debe basarse en esto, NUNCA en `auth()` a
+ * secas — `auth()` solo decodifica el JWT, así que un JWT revocado (pero
+ * aún no vencido/borrado) igual parecería "con sesión". Si /login usara
+ * `auth()` y el resto de la app usa esta función, alguien con una sesión
+ * revocada quedaría en un loop de redirección: /dashboard lo manda a
+ * /login (sesión inválida) y /login lo manda de vuelta a /dashboard
+ * (`auth()` seguía viendo el JWT como "con sesión").
+ */
+export async function obtenerUsuarioValidoOrNull(): Promise<UsuarioAutenticado | null> {
   const session = await auth();
   if (!session?.user?.id) return null;
 

@@ -7,7 +7,7 @@ import { requireRole } from "@/lib/auth-helpers";
 import { representanteSchema } from "@/lib/validations/persona";
 import { encryptField } from "@/lib/crypto";
 import { registrarAuditoria } from "@/lib/audit";
-import { ejecutarAccion, type ActionResult } from "@/lib/action-result";
+import { ejecutarAccion, AccionError, type ActionResult } from "@/lib/action-result";
 
 /**
  * Crea o reemplaza el representante (propietario o suplente) de una
@@ -85,7 +85,7 @@ export async function eliminarRepresentante(
       where: { id: representanteId },
     });
     if (!actual || actual.casillaId !== casilla.id) {
-      throw new Error("El representante no existe en esta casilla.");
+      throw new AccionError("El representante no existe en esta casilla.");
     }
 
     await prisma.representanteCasilla.delete({ where: { id: representanteId } });

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUserOrThrow, requireRole, requireLocalidadAccess } from "@/lib/auth-helpers";
 import { casillaSchema } from "@/lib/validations/casilla";
 import { registrarAuditoria } from "@/lib/audit";
-import { ejecutarAccion, type ActionResult } from "@/lib/action-result";
+import { ejecutarAccion, AccionError, type ActionResult } from "@/lib/action-result";
 
 /**
  * Crear casillas: Admin general, Admin de casillas y Representante
@@ -29,7 +29,7 @@ export async function crearCasilla(formData: unknown): Promise<ActionResult<{ id
       where: { seccion_tipoCasilla: { seccion: datos.seccion, tipoCasilla: datos.tipoCasilla } },
     });
     if (existente) {
-      throw new Error(`Ya existe una casilla con sección ${datos.seccion} y tipo ${datos.tipoCasilla}.`);
+      throw new AccionError(`Ya existe una casilla con sección ${datos.seccion} y tipo ${datos.tipoCasilla}.`);
     }
 
     const casilla = await prisma.casilla.create({
@@ -61,7 +61,7 @@ export async function actualizarCasilla(
 ): Promise<ActionResult<{ id: string }>> {
   return ejecutarAccion(async () => {
     await requireUserOrThrow();
-    throw new Error("Editar casillas está deshabilitado para proteger el catálogo oficial.");
+    throw new AccionError("Editar casillas está deshabilitado para proteger el catálogo oficial.");
   });
 }
 
@@ -74,7 +74,7 @@ export async function actualizarCasilla(
 export async function eliminarCasilla(_id: string): Promise<ActionResult<{ id: string }>> {
   return ejecutarAccion(async () => {
     await requireUserOrThrow();
-    throw new Error("Eliminar casillas está deshabilitado para proteger el catálogo oficial.");
+    throw new AccionError("Eliminar casillas está deshabilitado para proteger el catálogo oficial.");
   });
 }
 
@@ -86,7 +86,7 @@ export async function eliminarCasilla(_id: string): Promise<ActionResult<{ id: s
 export async function obtenerCasillaConAccesoOrThrow(casillaId: string) {
   const usuario = await requireUserOrThrow();
   const casilla = await prisma.casilla.findUnique({ where: { id: casillaId } });
-  if (!casilla) throw new Error("La casilla no existe.");
+  if (!casilla) throw new AccionError("La casilla no existe.");
   requireLocalidadAccess(usuario, casilla);
   return { usuario, casilla };
 }

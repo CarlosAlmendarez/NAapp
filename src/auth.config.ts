@@ -40,10 +40,15 @@ export const authConfig = {
       const isLoginPage = request.nextUrl.pathname.startsWith("/login");
 
       if (isLoginPage) {
-        // Si ya hay sesión, sacarlo de /login hacia el dashboard.
-        if (isLoggedIn) {
-          return Response.redirect(new URL("/dashboard", request.nextUrl));
-        }
+        // OJO: no rebotar aquí a /dashboard solo porque `auth` (el JWT
+        // crudo, sin tocar la BD — el middleware corre en Edge y no
+        // puede) diga "hay sesión". Un JWT revocado (sessionVersion ya no
+        // coincide, o la cuenta se desactivó) sigue pareciendo "con
+        // sesión" para este chequeo, y /dashboard sí valida contra la BD
+        // y rebotaría de vuelta a /login — con esa redirección aquí,
+        // entrarían en loop infinito. La página /login ya hace ese
+        // rebote correctamente con la sesión validada contra la BD (ver
+        // obtenerUsuarioValidoOrNull en src/lib/auth-helpers.ts).
         return true;
       }
 

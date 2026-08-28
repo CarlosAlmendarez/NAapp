@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { obtenerUsuarioValidoOrNull } from "@/lib/auth-helpers";
 
 export default async function Home() {
-  const session = await auth();
-  redirect(session?.user ? "/dashboard" : "/login");
+  // Validado contra la BD (no `auth()` a secas) — ver el comentario en
+  // obtenerUsuarioValidoOrNull para por qué importa.
+  const usuario = await obtenerUsuarioValidoOrNull();
+  redirect(usuario ? "/dashboard" : "/login");
 }
