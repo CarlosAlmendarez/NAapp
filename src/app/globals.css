@@ -1,51 +1,64 @@
 @import "tailwindcss";
 
 /*
- * Paleta institucional Nueva Alianza SLP: verde-azulado (teal) como color
- * primario, naranja como acento puntual. Sobria: colores planos, sin
- * gradientes ni sombras decorativas. Un solo tema (claro) — esta es una
- * herramienta de trabajo de campo, no requiere modo oscuro.
+ * Paleta institucional Nueva Alianza SLP — tomada del sitio oficial
+ * (nuevaalianzaslp.org, kit de color de Elementor: --e-global-color-primary
+ * #14B4B6, --e-global-color-secondary/accent #025159) y del logo oficial
+ * (badge #0099B3). Es una paleta monocromática en tonos teal, sin naranja
+ * de marca: el sitio real no lo usa, así que se retiró como color de marca
+ * (queda un ámbar solo como color semántico de "advertencia", desligado de
+ * la identidad visual). Sobria: colores planos, sin gradientes ni sombras
+ * decorativas. Un solo tema (claro) — herramienta de trabajo de campo, no
+ * requiere modo oscuro.
+ *
+ * Nota de accesibilidad: el teal claro de marca (#14B4B6) no alcanza 4.5:1
+ * de contraste con texto blanco, así que se usa como "accent" (con texto
+ * oscuro encima) y no como fondo de botón con texto blanco; el teal oscuro
+ * (#025159) es el que carga esa función (contraste ~9:1). El gris de texto
+ * del sitio (#B8B4B0) tampoco alcanza contraste de lectura sobre blanco,
+ * así que para texto secundario se usa un gris propio, sí accesible.
  */
 :root {
   --radius: 0.5rem;
 
-  --background: #f7faf9;
-  --foreground: #10231f;
+  --background: #ffffff;
+  --foreground: #0b2426;
 
   --card: #ffffff;
-  --card-foreground: #10231f;
+  --card-foreground: #0b2426;
 
   --popover: #ffffff;
-  --popover-foreground: #10231f;
+  --popover-foreground: #0b2426;
 
-  /* Teal institucional */
-  --primary: #0f6b62;
-  --primary-hover: #0c5750;
-  --primary-foreground: #f3fbf9;
+  /* Teal oscuro institucional (--e-global-color-secondary/accent del sitio) */
+  --primary: #025159;
+  --primary-hover: #013c41;
+  --primary-foreground: #ffffff;
 
-  --secondary: #e3efec;
-  --secondary-foreground: #0f6b62;
+  --secondary: #e3f4f3;
+  --secondary-foreground: #025159;
 
   --muted: #eef2f1;
   --muted-foreground: #55655f;
 
-  /* Naranja de acento — uso puntual (alertas suaves, resaltados, estados pendientes) */
-  --accent: #d9691e;
-  --accent-hover: #b8560f;
-  --accent-foreground: #fff8f2;
+  /* Teal claro institucional (--e-global-color-primary del sitio, color del logo) */
+  --accent: #14b4b6;
+  --accent-hover: #109698;
+  --accent-foreground: #04282b;
 
   --destructive: #b3261e;
   --destructive-foreground: #fff5f4;
 
-  --success: #1a7a4c;
+  --success: #15803d;
   --success-foreground: #f2fbf6;
 
+  /* Ámbar: solo estado semántico de advertencia, no es color de marca. */
   --warning: #a8660a;
   --warning-foreground: #fff8ec;
 
   --border: #d8e3e0;
   --input: #d8e3e0;
-  --ring: #0f6b62;
+  --ring: #025159;
 }
 
 @theme inline {

@@ -71,32 +71,57 @@ En producción/CI, usa:
 npm run db:migrate:deploy  # aplica migraciones ya generadas, sin crear nuevas
 ```
 
-## 4. Catálogo de municipios y primer Administrador general
+## 4. Catálogo de municipios, casillas y primer Administrador general
 
-El catálogo de ejemplo en `prisma/data/municipios.sample.json` **NO** es el
-catálogo completo de los 58 municipios — solo trae ~15 para poder probar el
-flujo. Antes de usar el sistema en serio:
+`prisma/data/municipios.json` (58 municipios) y `prisma/data/casillas.json`
+(3,660 casillas) ya están generados a partir del padrón oficial
+`prisma/data/secciones-y-casillas-2024.xlsx` ("SECCIONES Y CASILLAS 2024"),
+usando:
 
-1. Crea `prisma/data/municipios.json` con el catálogo oficial completo
-   (mismo formato: `[{ "nombre": "..." }, ...]`). El script de seed lo
-   detecta automáticamente y usa ese archivo en vez del de ejemplo.
-2. Corre el seed:
-   ```bash
-   npm run db:seed
-   ```
-   Esto:
-   - Carga el catálogo de municipios.
-   - Crea el primer **Administrador general** a partir de
-     `SEED_ADMIN_NOMBRE` / `SEED_ADMIN_CORREO` / `SEED_ADMIN_PASSWORD`
-     (por script, **no** por UI — deliberadamente no existe registro
-     público en la app).
-   - Carga un par de casillas de ejemplo (solo si la tabla está vacía).
+```bash
+npx tsx scripts/importar-secciones-casillas.ts
+```
 
-   **Inicia sesión y cambia esa contraseña de inmediato** desde
-   "Cambiar contraseña" en el menú de usuario.
+Vuelve a correr ese comando cuando el INE/el partido publique una versión
+actualizada del Excel (por ejemplo, para el siguiente proceso electoral):
+sobrescribe `municipios.json` y `casillas.json` con el contenido más
+reciente. El importador:
 
-El seed es idempotente: puedes volver a correrlo (por ejemplo tras
-actualizar `municipios.json`) sin duplicar al admin ni las casillas.
+- Toma los nombres de municipio **tal cual** vienen en el Excel (en
+  mayúsculas, sin acentos en algunos casos) — no se "corrigen" a mano para
+  no arriesgar una transcripción incorrecta del catálogo oficial.
+- Resuelve automáticamente filas duplicadas (misma sección + tipo de
+  casilla), quedándose con la más completa.
+- **Nunca** carga datos de RC (nombre, clave de elector, correo, teléfono)
+  aunque el Excel ya los traiga capturados — son datos personales que deben
+  entrar cifrados vía la app, no por un script sin cifrar. Si el Excel trae
+  filas con eso ya lleno, el importador solo avisa cuántas para revisarlas
+  a mano.
+
+Con los JSON ya generados, corre el seed:
+
+```bash
+npm run db:seed
+```
+
+Esto:
+- Carga el catálogo de 58 municipios.
+- Crea el primer **Administrador general** a partir de
+  `SEED_ADMIN_NOMBRE` / `SEED_ADMIN_CORREO` / `SEED_ADMIN_PASSWORD`
+  (por script, **no** por UI — deliberadamente no existe registro público
+  en la app).
+- Inserta las 3,660 casillas del catálogo real (usa `createMany` con
+  `skipDuplicates`, así que es seguro volver a correrlo: nunca duplica ni
+  pisa una casilla que un capturador ya haya editado).
+
+**Inicia sesión y cambia esa contraseña de inmediato** desde
+"Cambiar contraseña" en el menú de usuario.
+
+Si en algún momento no existe `prisma/data/casillas.json` (por ejemplo, en
+un clon nuevo del repo antes de correr el importador), el seed cae de
+vuelta a cargar solo un par de casillas de ejemplo desde
+`prisma/data/municipios.sample.json`, para poder probar el flujo sin el
+archivo real.
 
 ## 5. Desarrollo local
 
@@ -156,6 +181,21 @@ src/app/(app)/               Rutas protegidas (dashboard, casillas, usuarios, es
 src/app/login/               Login (única puerta de entrada; sin registro público)
 ```
 
+## Marca
+
+- **Logo**: `public/logo-mark.png` es un recorte cuadrado de
+  `assets/branding/logo-original.jpeg` (el archivo tal cual lo entregó el
+  partido). Si cambia el logo, reemplaza `logo-original.jpeg` y vuelve a
+  recortarlo a la marca cuadrada (o pide que se regenere `logo-mark.png`,
+  `src/app/icon.png` y `src/app/favicon.ico`).
+- **Colores**: tomados del sitio oficial (nuevaalianzaslp.org, kit de color
+  de Elementor) y del logo — ver el comentario al inicio de
+  `src/app/globals.css` para el detalle de cada valor y por qué el gris de
+  texto y el teal claro de marca **no** se copiaron literalmente (fallan
+  contraste de accesibilidad como texto/fondo). El sitio no usa naranja de
+  marca, así que se retiró; solo queda un ámbar como color semántico de
+  "advertencia", sin relación con la identidad visual.
+
 ## Decisiones de seguridad y por qué
 
 - **Prisma sobre Drizzle**: mejor DX (Prisma Studio, migraciones maduras)
@@ -206,22 +246,25 @@ src/app/login/               Login (única puerta de entrada; sin registro públ
 
 ## Pendientes que debes configurar tú manualmente
 
-1. Crear el proyecto en Neon y obtener `DATABASE_URL` / `DIRECT_URL`
-   (sección 2).
+1. ~~Crear el proyecto en Neon y obtener `DATABASE_URL` / `DIRECT_URL`~~ —
+   hecho: conectado a `neondb` en Neon, migraciones aplicadas.
 2. Crear el rol de Postgres de mínimo privilegio para producción (sección 2,
-   opcional pero recomendado).
-3. Conectar el repositorio a Vercel y cargar las variables de entorno.
+   opcional pero recomendado) — la app sigue usando el rol owner de Neon
+   por ahora.
+3. Conectar el repositorio a Vercel y cargar las variables de entorno
+   (el repo ya está en GitHub: `CarlosAlmendarez/NAapp`, rama `main`).
 4. Crear la base de Upstash Redis y cargar `UPSTASH_REDIS_REST_URL` /
    `UPSTASH_REDIS_REST_TOKEN` (recomendado antes de ir a producción; sin
    esto el rate limiting de login no es confiable con múltiples instancias
    serverless).
-5. Reemplazar `prisma/data/municipios.sample.json` por el catálogo oficial
-   completo de los 58 municipios, como `prisma/data/municipios.json`.
-6. Correr `npm run db:seed` para crear el primer Administrador general, e
-   iniciar sesión para cambiar esa contraseña de inmediato.
-7. Subir el logo oficial de Nueva Alianza SLP a `/public/` y reemplazar
-   `src/components/layout/logo-placeholder.tsx` por un `<Image>` apuntando
-   a ese archivo (instrucciones dentro del propio componente).
+5. ~~Reemplazar el catálogo de ejemplo por el oficial~~ — hecho: 58
+   municipios y 3,660 casillas reales cargados desde
+   `SECCIONES Y CASILLAS 2024.xlsx` (ver sección 4).
+6. ~~Correr `npm run db:seed`~~ — hecho: primer Administrador general
+   creado (`admin@nuevaalianzaslp.org`). **Inicia sesión y cambia esa
+   contraseña de inmediato.**
+7. ~~Subir el logo oficial~~ — hecho: `public/logo-mark.png` (recorte de
+   `assets/branding/logo-original.jpeg`), integrado en el header y el login.
 8. Decidir si además se activa Vercel Password Protection u otra capa de
    acceso adicional (sección 6, punto 6) — es una decisión de producto, no
    algo que se pueda preconfigurar sin tu decisión.

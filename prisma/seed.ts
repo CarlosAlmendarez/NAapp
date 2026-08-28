@@ -65,6 +65,47 @@ async function seedAdminGeneral() {
   console.log("  ⚠️  Cambia esta contraseña desde la app inmediatamente después de iniciar sesión.");
 }
 
+type CasillaSeed = {
+  distritoFederal: string;
+  distritoLocal: string;
+  municipio: string;
+  seccion: number;
+  tipoCasilla: string;
+  domicilio: string;
+  coloniaLocalidad: string;
+  codigoPostal: string | null;
+  ubicacion: string;
+};
+
+/**
+ * Carga el catálogo real de casillas generado por
+ * `scripts/importar-secciones-casillas.ts` a partir del padrón oficial
+ * (prisma/data/secciones-y-casillas-2024.xlsx -> prisma/data/casillas.json).
+ * Usa `createMany` con `skipDuplicates` para que sea idempotente (una
+ * casilla ya capturada por un usuario nunca se pisa: este catálogo solo
+ * inserta las que faltan, según la restricción única sección+tipo).
+ */
+async function seedCasillasReales(): Promise<boolean> {
+  const ruta = path.join(__dirname, "data", "casillas.json");
+  if (!existsSync(ruta)) return false;
+
+  const casillas: CasillaSeed[] = JSON.parse(readFileSync(ruta, "utf-8"));
+  const TAM_LOTE = 500;
+  let insertadas = 0;
+
+  for (let i = 0; i < casillas.length; i += TAM_LOTE) {
+    const lote = casillas.slice(i, i + TAM_LOTE);
+    const resultado = await prisma.casilla.createMany({ data: lote, skipDuplicates: true });
+    insertadas += resultado.count;
+  }
+
+  console.log(
+    `✔ Catálogo real de casillas: ${insertadas} nueva(s) insertada(s) de ${casillas.length} en el archivo ` +
+      `(las ya existentes —por sección+tipo— se omiten).`
+  );
+  return true;
+}
+
 async function seedCasillasDeEjemplo(municipios: MunicipioSeed[]) {
   if (municipios.length === 0) return;
 
@@ -146,7 +187,16 @@ async function seedCasillasDeEjemplo(municipios: MunicipioSeed[]) {
 async function main() {
   const municipios = await seedMunicipios();
   await seedAdminGeneral();
-  await seedCasillasDeEjemplo(municipios);
+
+  const seCargoElCatalogoReal = await seedCasillasReales();
+  if (!seCargoElCatalogoReal) {
+    console.warn(
+      "\n⚠️  No se encontró prisma/data/casillas.json — se omite el catálogo real de casillas. " +
+        "Corre `npx tsx scripts/importar-secciones-casillas.ts` con el Excel oficial para generarlo. " +
+        "Mientras tanto se cargan solo un par de casillas de ejemplo.\n"
+    );
+    await seedCasillasDeEjemplo(municipios);
+  }
 }
 
 main()

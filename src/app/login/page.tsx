@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { LoginForm } from "@/app/login/login-form";
-import { LogoPlaceholder } from "@/components/layout/logo-placeholder";
+import { Logo } from "@/components/layout/logo";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 
@@ -24,7 +24,7 @@ export default async function LoginPage({
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-4 py-10">
-      <LogoPlaceholder />
+      <Logo size={96} />
 
       <Card className="w-full max-w-sm">
         <CardHeader>

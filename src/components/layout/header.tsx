@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LogOut, ShieldAlert, KeyRound, ChevronDown } from "lucide-react";
-import { LogoPlaceholder } from "@/components/layout/logo-placeholder";
+import { LogoConTexto } from "@/components/layout/logo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +19,7 @@ export function Header({ usuario }: { usuario: UsuarioAutenticado }) {
     <header className="border-b border-border bg-card">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
         <Link href="/dashboard">
-          <LogoPlaceholder />
+          <LogoConTexto />
         </Link>
 
         <DropdownMenu>
