@@ -158,28 +158,41 @@ ambas para un mismo usuario si hace falta.
 npm run dev
 ```
 
-## 5.1 Pruebas de responsividad (Playwright)
+## 5.1 Pruebas automatizadas (Playwright) — contra una base de PRUEBA, no producción
 
 `tests/responsive.spec.ts` visita las pantallas principales en tres
 tamaños (celular 390px, tablet 768px, escritorio 1440px) con los tres
 roles (Admin general, Capturador, Representante General) y verifica que:
 ninguna página genere scroll horizontal, y que los datos clave (nombre,
 correo, rol, localidades, tipo de casilla, distrito, etc.) sigan visibles
-en cada tamaño — en vez de quedar ocultos por columnas de tabla que no
-caben en una pantalla angosta.
+en cada tamaño. `tests/logout.spec.ts` prueba el flujo real de cerrar
+sesión en un navegador.
 
-Para correrlas:
+**Nunca se corren contra la base de producción** (la de `.env`). Hay una
+segunda base de Neon dedicada solo a pruebas, configurada en `.env.test`
+(no está en git — si no existe en tu máquina, pide la cadena de conexión y
+créalo con el mismo formato que `.env.example`, agregando `DATABASE_URL` y
+`DIRECT_URL` de esa base de pruebas). Todo comando contra esa base pasa
+por `dotenv-cli`, así nunca hay riesgo de tocar producción por accidente.
+
+Primera vez (o después de cambios al esquema/catálogo):
 
 ```bash
-npm run build
-npm run start          # deja el server corriendo en :3000 en otra terminal
+npm run test:db:setup   # migra + siembra municipios/distritos/casillas + admin/RG/capturadores
+```
+
+Para correr las pruebas:
+
+```bash
+npm run test:build
+npm run test:start      # deja el server de PRUEBA corriendo en :3000 en otra terminal
 npm run test:responsive
 ```
 
-Requiere que ya existan en la base el Administrador general, al menos el
-capturador de un distrito (`distrito12@...`) y el usuario RG de prueba
-(`npx tsx scripts/crear-usuario-rg-prueba.ts`) — ajusta las credenciales en
-`tests/responsive.spec.ts` si tu base tiene otras.
+`test:db:setup` deja usuarios con las mismas credenciales que ya esperan
+los archivos de prueba (Admin general, RG, y los 15 capturadores con las
+mismas contraseñas que `credenciales.txt`) — si cambias esas contraseñas,
+actualiza también `scripts/sembrar-usuarios-prueba.ts` y los `tests/*.spec.ts`.
 
 Nota: la primera vez, instala el navegador de Playwright con
 `npx playwright install chromium`.

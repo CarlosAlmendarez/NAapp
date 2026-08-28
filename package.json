@@ -12,6 +12,12 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
+    "test:db:migrate": "dotenv -e .env.test -- prisma migrate deploy",
+    "test:db:seed": "dotenv -e .env.test -- prisma db seed",
+    "test:db:seed:usuarios": "dotenv -e .env.test -- tsx scripts/sembrar-usuarios-prueba.ts",
+    "test:db:setup": "npm run test:db:migrate && npm run test:db:seed && npm run test:db:seed:usuarios",
+    "test:build": "dotenv -e .env.test -- next build",
+    "test:start": "dotenv -e .env.test -- next start",
     "test:responsive": "playwright test"
   },
   "prisma": {
@@ -45,6 +51,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "^15.5.24",
     "prisma": "^6.19.3",
