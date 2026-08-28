@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DropdownAccionItem } from "@/components/layout/dropdown-accion-item";
 import { Button } from "@/components/ui/button";
 import { ROL_LABELS } from "@/lib/roles";
 import { cerrarSesion, cerrarTodasMisSesiones } from "@/actions/auth";
@@ -43,23 +44,15 @@ export function Header({ usuario }: { usuario: UsuarioAutenticado }) {
                 </Link>
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem asChild>
-              <form action={cerrarTodasMisSesiones} className="w-full">
-                <button type="submit" className="flex w-full items-center">
-                  <ShieldAlert className="mr-2 h-4 w-4" />
-                  Cerrar sesión en todos los dispositivos
-                </button>
-              </form>
-            </DropdownMenuItem>
+            <DropdownAccionItem accion={cerrarTodasMisSesiones}>
+              <ShieldAlert className="mr-2 h-4 w-4" />
+              Cerrar sesión en todos los dispositivos
+            </DropdownAccionItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <form action={cerrarSesion} className="w-full">
-                <button type="submit" className="flex w-full items-center">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Cerrar sesión
-                </button>
-              </form>
-            </DropdownMenuItem>
+            <DropdownAccionItem accion={cerrarSesion}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Cerrar sesión
+            </DropdownAccionItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
