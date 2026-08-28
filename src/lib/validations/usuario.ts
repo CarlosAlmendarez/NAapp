@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { passwordSchema } from "@/lib/validations/auth";
 
-export const rolSchema = z.enum(["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR"]);
+export const rolSchema = z.enum([
+  "ADMIN_GENERAL",
+  "ADMIN_CASILLAS",
+  "CAPTURADOR",
+  "REPRESENTANTE_GENERAL",
+]);
 
 export const localidadAsignadaSchema = z.object({
   tipo: z.enum(["MUNICIPIO", "DISTRITO_LOCAL"]),

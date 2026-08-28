@@ -16,6 +16,11 @@ export default async function RepresentantePage({
   if (tipoUpper !== "PROPIETARIO" && tipoUpper !== "SUPLENTE") notFound();
   const tipo = tipoUpper as "PROPIETARIO" | "SUPLENTE";
 
+  // El Representante General no captura RC — ni siquiera debe ver el
+  // formulario (la Server Action también lo bloquea, pero no hay razón
+  // para dejarlo llegar hasta aquí).
+  if (usuario.rol === "REPRESENTANTE_GENERAL") notFound();
+
   const casilla = await prisma.casilla.findUnique({ where: { id } });
   if (!casilla) notFound();
   if (!tieneAccesoALocalidad(usuario, casilla)) {

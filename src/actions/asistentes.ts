@@ -3,10 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { obtenerCasillaConAccesoOrThrow } from "@/actions/casillas";
+import { requireRole } from "@/lib/auth-helpers";
 import { asistenteSchema } from "@/lib/validations/persona";
 import { encryptField } from "@/lib/crypto";
 import { registrarAuditoria } from "@/lib/audit";
 import { ejecutarAccion, type ActionResult } from "@/lib/action-result";
+
+// El Representante General (RG) queda excluido a propósito de estas tres
+// acciones: solo administra el catálogo de casillas, nunca captura
+// asistentes electorales (igual que con los RC, ver actions/representantes.ts).
 
 export async function crearAsistente(
   casillaId: string,
@@ -14,6 +19,7 @@ export async function crearAsistente(
 ): Promise<ActionResult<{ id: string }>> {
   return ejecutarAccion(async () => {
     const { usuario, casilla } = await obtenerCasillaConAccesoOrThrow(casillaId);
+    requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR"]);
     const datos = asistenteSchema.parse(formData);
 
     const asistente = await prisma.asistenteElectoral.create({
@@ -50,6 +56,7 @@ export async function actualizarAsistente(
 ): Promise<ActionResult<{ id: string }>> {
   return ejecutarAccion(async () => {
     const { usuario, casilla } = await obtenerCasillaConAccesoOrThrow(casillaId);
+    requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR"]);
     const datos = asistenteSchema.parse(formData);
 
     const anterior = await prisma.asistenteElectoral.findUnique({ where: { id: asistenteId } });
@@ -90,6 +97,7 @@ export async function eliminarAsistente(
 ): Promise<ActionResult<{ id: string }>> {
   return ejecutarAccion(async () => {
     const { usuario, casilla } = await obtenerCasillaConAccesoOrThrow(casillaId);
+    requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR"]);
 
     const actual = await prisma.asistenteElectoral.findUnique({ where: { id: asistenteId } });
     if (!actual || actual.casillaId !== casilla.id) {

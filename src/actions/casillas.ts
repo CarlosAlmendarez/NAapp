@@ -8,14 +8,16 @@ import { registrarAuditoria } from "@/lib/audit";
 import { ejecutarAccion, type ActionResult } from "@/lib/action-result";
 
 /**
- * Crear/editar casillas: solo Admin general y Admin de casillas
- * (ver tabla de permisos). El capturador nunca puede crear ni editar
- * la casilla en sí, solo capturar RC/asistentes dentro de su localidad.
+ * Crear/editar casillas: Admin general, Admin de casillas y Representante
+ * General (RG). El capturador nunca puede crear ni editar la casilla en
+ * sí, solo capturar RC/asistentes dentro de su localidad; el RG solo
+ * puede crear/editar/eliminar la casilla, nunca capturar RC ni asistentes
+ * (ver actions/representantes.ts y actions/asistentes.ts).
  */
 export async function crearCasilla(formData: unknown): Promise<ActionResult<{ id: string }>> {
   return ejecutarAccion(async () => {
     const usuario = await requireUserOrThrow();
-    requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS"]);
+    requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS", "REPRESENTANTE_GENERAL"]);
 
     const datos = casillaSchema.parse(formData);
 
@@ -49,7 +51,7 @@ export async function actualizarCasilla(
 ): Promise<ActionResult<{ id: string }>> {
   return ejecutarAccion(async () => {
     const usuario = await requireUserOrThrow();
-    requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS"]);
+    requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS", "REPRESENTANTE_GENERAL"]);
 
     const datos = casillaSchema.parse(formData);
 
@@ -92,7 +94,7 @@ export async function actualizarCasilla(
 export async function eliminarCasilla(id: string): Promise<ActionResult<{ id: string }>> {
   return ejecutarAccion(async () => {
     const usuario = await requireUserOrThrow();
-    requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS"]);
+    requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS", "REPRESENTANTE_GENERAL"]);
 
     const actual = await prisma.casilla.findUnique({ where: { id } });
     if (!actual) throw new Error("La casilla no existe.");

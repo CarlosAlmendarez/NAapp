@@ -18,7 +18,6 @@ import {
 
 type CasillaExistente = {
   id: string;
-  distritoFederal: string;
   distritoLocal: string;
   municipio: string;
   seccion: number;
@@ -47,7 +46,6 @@ export function CasillaForm({
     setFieldErrors({});
 
     const datos = {
-      distritoFederal: formData.get("distritoFederal"),
       distritoLocal: formData.get("distritoLocal"),
       municipio,
       seccion: formData.get("seccion"),
@@ -79,19 +77,7 @@ export function CasillaForm({
       {error && <Alert variant="destructive">{error}</Alert>}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="distritoFederal">Distrito federal</Label>
-          <Input
-            id="distritoFederal"
-            name="distritoFederal"
-            defaultValue={casilla?.distritoFederal}
-            placeholder="1. MATEHUALA"
-            required
-          />
-          <FieldError messages={fieldErrors.distritoFederal} />
-        </div>
-
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="distritoLocal">Distrito local</Label>
           <Input
             id="distritoLocal"

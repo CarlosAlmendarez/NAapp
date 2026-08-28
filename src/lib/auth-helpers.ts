@@ -29,6 +29,29 @@ export function distritosAsignados(usuario: UsuarioAutenticado): string[] {
 export class AutorizacionError extends Error {}
 
 /**
+ * Roles que no están acotados a municipios/distritos específicos — ven y
+ * pueden operar sobre cualquier casilla del catálogo. Capturador es el
+ * único rol que sí se restringe por localidad asignada.
+ */
+const ROLES_SIN_RESTRICCION_GEOGRAFICA: Rol[] = [
+  "ADMIN_GENERAL",
+  "ADMIN_CASILLAS",
+  "REPRESENTANTE_GENERAL",
+];
+
+/**
+ * Roles que pueden crear/editar/eliminar casillas (el catálogo en sí).
+ * Coincide hoy con ROLES_SIN_RESTRICCION_GEOGRAFICA, pero se deja como una
+ * lista aparte porque representan cosas distintas (alcance geográfico vs.
+ * permiso de CRUD) — un futuro rol podría tener una sin la otra.
+ */
+const ROLES_ADMINISTRAN_CASILLAS: Rol[] = ["ADMIN_GENERAL", "ADMIN_CASILLAS", "REPRESENTANTE_GENERAL"];
+
+export function puedeAdministrarCasillas(usuario: UsuarioAutenticado): boolean {
+  return ROLES_ADMINISTRAN_CASILLAS.includes(usuario.rol);
+}
+
+/**
  * Punto único de verdad para autenticación + autorización de bajo nivel.
  *
  * SIEMPRE vuelve a consultar la base de datos — nunca confía en el rol,
@@ -90,8 +113,9 @@ type CasillaGeografia = { municipio: string; distritoLocal: string };
 
 /**
  * true si el usuario puede ver/editar una casilla, ya sea por tener
- * asignado su municipio o su distrito local. Admin general y admin de
- * casillas siempre tienen acceso. Un municipio grande puede estar
+ * asignado su municipio o su distrito local. Los roles sin restricción
+ * geográfica (ver ROLES_SIN_RESTRICCION_GEOGRAFICA) siempre tienen acceso.
+ * Un municipio grande puede estar
  * repartido en varios distritos locales (ej. San Luis Potosí capital o
  * Soledad de Graciano Sánchez), por eso se evalúan ambas dimensiones por
  * separado en vez de asumir que un distrito equivale a un conjunto fijo
@@ -101,7 +125,7 @@ export function tieneAccesoALocalidad(
   usuario: UsuarioAutenticado,
   casilla: CasillaGeografia
 ): boolean {
-  if (usuario.rol === "ADMIN_GENERAL" || usuario.rol === "ADMIN_CASILLAS") return true;
+  if (ROLES_SIN_RESTRICCION_GEOGRAFICA.includes(usuario.rol)) return true;
   return usuario.localidades.some(
     (l) =>
       (l.tipo === "MUNICIPIO" && l.valor === casilla.municipio) ||
@@ -121,7 +145,7 @@ export function requireLocalidadAccess(
 
 /** Filtro Prisma a aplicar en cualquier consulta de Casilla según el rol del usuario. */
 export function filtroCasillasPorRol(usuario: UsuarioAutenticado): Prisma.CasillaWhereInput {
-  if (usuario.rol === "ADMIN_GENERAL" || usuario.rol === "ADMIN_CASILLAS") {
+  if (ROLES_SIN_RESTRICCION_GEOGRAFICA.includes(usuario.rol)) {
     return {};
   }
 

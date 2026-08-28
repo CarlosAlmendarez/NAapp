@@ -12,6 +12,9 @@ export default async function EditarAsistentePage({
   const usuario = await requireUser();
   const { id, asistenteId } = await params;
 
+  // El Representante General no captura asistentes electorales.
+  if (usuario.rol === "REPRESENTANTE_GENERAL") notFound();
+
   const casilla = await prisma.casilla.findUnique({ where: { id } });
   if (!casilla) notFound();
   if (!tieneAccesoALocalidad(usuario, casilla)) {

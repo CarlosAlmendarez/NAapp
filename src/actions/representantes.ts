@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { obtenerCasillaConAccesoOrThrow } from "@/actions/casillas";
+import { requireRole } from "@/lib/auth-helpers";
 import { representanteSchema } from "@/lib/validations/persona";
 import { encryptField } from "@/lib/crypto";
 import { registrarAuditoria } from "@/lib/audit";
@@ -13,6 +14,8 @@ import { ejecutarAccion, type ActionResult } from "@/lib/action-result";
  * casilla. Disponible para Admin general, Admin de casillas y Capturador
  * — siempre que la casilla pertenezca a una localidad del capturador
  * (verificado en obtenerCasillaConAccesoOrThrow, nunca solo en la UI).
+ * El Representante General (RG) queda excluido a propósito: solo
+ * administra el catálogo de casillas, nunca captura RC.
  */
 export async function guardarRepresentante(
   casillaId: string,
@@ -20,6 +23,7 @@ export async function guardarRepresentante(
 ): Promise<ActionResult<{ id: string }>> {
   return ejecutarAccion(async () => {
     const { usuario, casilla } = await obtenerCasillaConAccesoOrThrow(casillaId);
+    requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR"]);
     const datos = representanteSchema.parse(formData);
 
     const anterior = await prisma.representanteCasilla.findUnique({
@@ -75,6 +79,7 @@ export async function eliminarRepresentante(
 ): Promise<ActionResult<{ id: string }>> {
   return ejecutarAccion(async () => {
     const { usuario, casilla } = await obtenerCasillaConAccesoOrThrow(casillaId);
+    requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR"]);
 
     const actual = await prisma.representanteCasilla.findUnique({
       where: { id: representanteId },

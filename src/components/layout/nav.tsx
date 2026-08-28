@@ -11,13 +11,13 @@ const ITEMS: { href: string; label: string; icon: typeof LayoutDashboard; roles:
     href: "/dashboard",
     label: "Inicio",
     icon: LayoutDashboard,
-    roles: ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR"],
+    roles: ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR", "REPRESENTANTE_GENERAL"],
   },
   {
     href: "/casillas",
     label: "Casillas",
     icon: Vote,
-    roles: ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR"],
+    roles: ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR", "REPRESENTANTE_GENERAL"],
   },
   { href: "/usuarios", label: "Usuarios", icon: Users, roles: ["ADMIN_GENERAL"] },
   {

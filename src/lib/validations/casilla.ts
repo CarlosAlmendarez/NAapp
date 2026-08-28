@@ -5,11 +5,10 @@ import { z } from "zod";
 const TIPO_CASILLA_REGEX = /^(B|C\d{2}|S\d{2}|E\d{2}(C\d{2})?)$/;
 
 export const casillaSchema = z.object({
-  distritoFederal: z
-    .string()
-    .trim()
-    .min(1, "El distrito federal es obligatorio.")
-    .max(120),
+  // Ya no se captura desde la UI (solo se usa/muestra el distrito local
+  // para organizar el acceso) — se deja opcional para no perder el valor
+  // ya cargado del padrón oficial en las casillas existentes.
+  distritoFederal: z.string().trim().max(120).optional(),
   distritoLocal: z.string().trim().min(1, "El distrito local es obligatorio.").max(120),
   municipio: z.string().trim().min(1, "El municipio es obligatorio.").max(120),
   seccion: z.coerce

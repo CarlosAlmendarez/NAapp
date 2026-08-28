@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil, Plus, MapPin } from "lucide-react";
-import { requireUser, tieneAccesoALocalidad } from "@/lib/auth-helpers";
+import { requireUser, tieneAccesoALocalidad, puedeAdministrarCasillas } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +36,10 @@ export default async function CasillaDetallePage({
     notFound();
   }
 
-  const puedeEditarCasilla = usuario.rol === "ADMIN_GENERAL" || usuario.rol === "ADMIN_CASILLAS";
+  const puedeEditarCasilla = puedeAdministrarCasillas(usuario);
+  // El Representante General solo administra el catálogo de casillas —
+  // no debe ni ver las pestañas de RC/asistentes electorales.
+  const puedeVerRcYAsistentes = usuario.rol !== "REPRESENTANTE_GENERAL";
   const propietario = casilla.representantes.find((r) => r.tipo === "PROPIETARIO");
   const suplente = casilla.representantes.find((r) => r.tipo === "SUPLENTE");
 
@@ -50,7 +53,10 @@ export default async function CasillaDetallePage({
             </p>
             <CardTitle className="mt-0.5 flex flex-wrap items-center gap-2">
               Sección {casilla.seccion}
-              <Badge variant="accent">{formatTipoCasilla(casilla.tipoCasilla)}</Badge>
+              <span className="flex items-center gap-1.5 text-sm font-normal text-muted-foreground">
+                Tipo de Casilla:
+                <Badge variant="accent">{formatTipoCasilla(casilla.tipoCasilla)}</Badge>
+              </span>
             </CardTitle>
             <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
               <MapPin className="h-3.5 w-3.5" />
@@ -71,10 +77,6 @@ export default async function CasillaDetallePage({
         </CardHeader>
         <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
           <p className="sm:col-span-2">
-            <span className="text-muted-foreground">Distrito federal: </span>
-            {casilla.distritoFederal}
-          </p>
-          <p className="sm:col-span-2">
             <span className="text-muted-foreground">Domicilio: </span>
             {casilla.domicilio}
           </p>
@@ -91,6 +93,7 @@ export default async function CasillaDetallePage({
         </CardContent>
       </Card>
 
+      {puedeVerRcYAsistentes && (
       <Tabs defaultValue="representantes">
         <TabsList>
           <TabsTrigger value="representantes">Representantes</TabsTrigger>
@@ -159,6 +162,7 @@ export default async function CasillaDetallePage({
           )}
         </TabsContent>
       </Tabs>
+      )}
     </div>
   );
 }

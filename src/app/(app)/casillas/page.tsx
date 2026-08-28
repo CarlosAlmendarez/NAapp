@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireUser, puedeAdministrarCasillas } from "@/lib/auth-helpers";
 import { listarCasillas, municipiosDisponibles } from "@/lib/casillas-query";
 import { CasillasFiltro } from "@/components/casillas/casillas-filtro";
 import { CasillaCard } from "@/components/casillas/casilla-card";
@@ -16,7 +16,7 @@ export default async function CasillasPage({
   const usuario = await requireUser();
   const params = await searchParams;
 
-  const puedeCrear = usuario.rol === "ADMIN_GENERAL" || usuario.rol === "ADMIN_CASILLAS";
+  const puedeCrear = puedeAdministrarCasillas(usuario);
 
   const [{ casillas, total, page, totalPages }, municipios] = await Promise.all([
     listarCasillas(usuario, {

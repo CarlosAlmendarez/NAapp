@@ -28,8 +28,9 @@ export function CasillaCard({ casilla }: { casilla: CasillaResumen }) {
             <p className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Distrito local {casilla.distritoLocal}
             </p>
-            <div className="mt-0.5 flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-foreground">Sección {casilla.seccion}</span>
+            <p className="mt-0.5 font-semibold text-foreground">Sección {casilla.seccion}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+              Tipo de Casilla:
               <Badge variant="accent">{formatTipoCasilla(casilla.tipoCasilla)}</Badge>
             </div>
             <p className="mt-1 flex items-center gap-1 truncate text-sm text-muted-foreground">

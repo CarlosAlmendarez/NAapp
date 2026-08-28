@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireUser, puedeAdministrarCasillas } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { CasillaForm } from "@/components/casillas/casilla-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ export default async function EditarCasillaPage({
   params: Promise<{ id: string }>;
 }) {
   const usuario = await requireUser();
-  if (usuario.rol !== "ADMIN_GENERAL" && usuario.rol !== "ADMIN_CASILLAS") {
+  if (!puedeAdministrarCasillas(usuario)) {
     redirect("/casillas");
   }
 

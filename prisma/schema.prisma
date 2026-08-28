@@ -21,6 +21,10 @@ enum Rol {
   ADMIN_GENERAL
   ADMIN_CASILLAS
   CAPTURADOR
+  // Representante General: solo crea/edita/elimina casillas (el catálogo
+  // en sí). No captura RC propietario/suplente ni asistentes electorales.
+  // Sin restricción de municipio/distrito (como Admin de casillas).
+  REPRESENTANTE_GENERAL
 }
 
 enum TipoRepresentante {
@@ -126,7 +130,10 @@ model UsuarioLocalidad {
 model Casilla {
   id String @id @default(cuid())
 
-  distritoFederal  String
+  // Ya no se captura ni se muestra en la UI (solo se usa el distrito
+  // local para organizar el acceso); se deja opcional para no perder el
+  // dato ya cargado del padrón oficial.
+  distritoFederal  String?
   distritoLocal    String
   municipio        String
   seccion          Int
