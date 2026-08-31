@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth-helpers";
-import { obtenerEstadisticas } from "@/lib/stats";
+import { obtenerEstadisticas, obtenerEstadisticasRuta } from "@/lib/stats";
 import { StatsCards } from "@/components/dashboard/stats-cards";
+import { RutaStatsCards } from "@/components/dashboard/ruta-stats-cards";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ROL_LABELS } from "@/lib/roles";
@@ -9,7 +10,13 @@ import { etiquetasLocalidades } from "@/lib/localidad";
 
 export default async function DashboardPage() {
   const usuario = await requireUser();
-  const stats = await obtenerEstadisticas(usuario);
+  // El RG nunca captura ni ve RC propietario/suplente — su avance se mide
+  // por enlaces capturados en el módulo de Rutas, no por obtenerEstadisticas
+  // (que cuenta RC). Los demás roles siguen viendo el avance de RC de
+  // siempre.
+  const esRG = usuario.rol === "REPRESENTANTE_GENERAL";
+  const stats = esRG ? null : await obtenerEstadisticas(usuario);
+  const statsRuta = esRG ? await obtenerEstadisticasRuta(usuario) : null;
 
   return (
     <div className="space-y-6">
@@ -35,7 +42,7 @@ export default async function DashboardPage() {
           </Card>
         )}
 
-      <StatsCards stats={stats} />
+      {esRG ? <RutaStatsCards stats={statsRuta!} /> : <StatsCards stats={stats!} />}
 
       <Card>
         <CardHeader>
