@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MapPin } from "lucide-react";
-import { requireUser, tieneAccesoALocalidad, puedeUsarModuloRutas } from "@/lib/auth-helpers";
+import { requireUser, tieneAccesoALocalidad } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,10 +33,13 @@ export default async function CasillaDetallePage({
     notFound();
   }
 
-  // El Representante General no captura RC — solo ve la sección de
-  // Enlace de casilla (módulo Rutas), nunca la de RC.
+  // El Representante General no captura RC, y tampoco ve aquí la sección
+  // de Enlace: siempre debe capturar/editar enlaces desde el módulo de
+  // Rutas (/rutas), nunca desde el atajo del detalle de una casilla — así
+  // no tiene más que un solo camino para hacerlo. Admin general sí ve
+  // ambas secciones (puede usar Rutas y también administrar el catálogo).
   const puedeVerRc = usuario.rol !== "REPRESENTANTE_GENERAL";
-  const puedeVerEnlace = puedeUsarModuloRutas(usuario);
+  const puedeVerEnlace = usuario.rol === "ADMIN_GENERAL";
   const propietario = casilla.representantes.find((r) => r.tipo === "PROPIETARIO");
   const suplente = casilla.representantes.find((r) => r.tipo === "SUPLENTE");
 

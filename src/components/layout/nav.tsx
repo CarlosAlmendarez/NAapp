@@ -6,17 +6,15 @@ import type { Rol } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, Vote, Users, BarChart3, Map } from "lucide-react";
 
+// Orden fijo del menú principal: Inicio primero, Rutas justo después
+// (segunda opción), y Casillas al final — el resto de roles solo ve un
+// subconjunto de estos ítems, pero el orden relativo entre los que sí ve
+// respeta siempre este mismo arreglo.
 const ITEMS: { href: string; label: string; icon: typeof LayoutDashboard; roles: Rol[] }[] = [
   {
     href: "/dashboard",
     label: "Inicio",
     icon: LayoutDashboard,
-    roles: ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR", "REPRESENTANTE_GENERAL"],
-  },
-  {
-    href: "/casillas",
-    label: "Casillas",
-    icon: Vote,
     roles: ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR", "REPRESENTANTE_GENERAL"],
   },
   {
@@ -31,6 +29,12 @@ const ITEMS: { href: string; label: string; icon: typeof LayoutDashboard; roles:
     label: "Estadísticas",
     icon: BarChart3,
     roles: ["ADMIN_GENERAL"],
+  },
+  {
+    href: "/casillas",
+    label: "Casillas",
+    icon: Vote,
+    roles: ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR", "REPRESENTANTE_GENERAL"],
   },
 ];
 

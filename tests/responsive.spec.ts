@@ -116,6 +116,8 @@ for (const [dispositivo, viewport] of Object.entries(VIEWPORTS)) {
       await page.waitForURL(/\/casillas\/[a-z0-9]+$/);
       await expect(page.getByRole("heading", { name: /^Distrito local /i })).toBeVisible();
       await expect(page.getByRole("heading", { name: "Representantes de Casilla" })).toHaveCount(0);
+      // El RG siempre captura desde /rutas, nunca desde este atajo.
+      await expect(page.getByRole("heading", { name: "Enlace de casilla" })).toHaveCount(0);
       await expectSinScrollHorizontal(page);
     });
 

@@ -160,7 +160,7 @@ test.describe("Acceso a casillas por rol y localidad", () => {
     await expect(page.getByRole("heading", { name: "Representantes de Casilla" })).toBeVisible();
   });
 
-  test("Representante General: no puede crear casillas y no ve RC (ve Enlace)", async ({
+  test("Representante General: no puede crear casillas, no ve RC, y el detalle no ofrece capturar (solo /rutas)", async ({
     page,
   }) => {
     const casillaSalinas = await prisma.casilla.findFirst({
@@ -181,7 +181,10 @@ test.describe("Acceso a casillas por rol y localidad", () => {
 
     await page.goto(`/casillas/${casillaSalinas!.id}`);
     await expect(page.getByRole("heading", { name: "Representantes de Casilla" })).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "Enlace de casilla" })).toBeVisible();
+    // Tampoco ve la sección de Enlace desde aquí — el RG debe capturar
+    // siempre a través de /rutas, nunca desde este atajo del detalle
+    // (ver src/app/(app)/casillas/[id]/page.tsx).
+    await expect(page.getByRole("heading", { name: "Enlace de casilla" })).toHaveCount(0);
 
     await page.goto(`/casillas/${casillaSalinas!.id}/representante/propietario`);
     // Lo que importa es que el formulario de RC nunca se muestra, más allá

@@ -133,10 +133,21 @@ test.describe.serial("Rutas: captura, orden, validaciones y dashboard del RG", (
     await expect(page.getByText("Tel: 4441234567")).toBeVisible();
   });
 
-  test("la casilla capturada aparece en el detalle de la casilla con estatus Capturado", async ({
+  test("el RG ya no ve la sección de Enlace en el detalle de la casilla (solo desde /rutas)", async ({
     page,
   }) => {
     await login(page, CREDENCIALES.rg);
+    await page.goto(`/casillas/${casillaId}`);
+    // El RG siempre debe capturar/editar desde /rutas — el detalle de la
+    // casilla ya no le ofrece ese atajo (ver
+    // src/app/(app)/casillas/[id]/page.tsx).
+    await expect(page.getByRole("heading", { name: "Enlace de casilla" })).toHaveCount(0);
+  });
+
+  test("Admin general SÍ ve y puede editar el Enlace desde el detalle de la casilla", async ({
+    page,
+  }) => {
+    await login(page, CREDENCIALES.adminGeneral);
     await page.goto(`/casillas/${casillaId}`);
     await expect(page.getByRole("heading", { name: "Enlace de casilla" })).toBeVisible();
     await expect(page.getByText("Rosa Hernández")).toBeVisible();
