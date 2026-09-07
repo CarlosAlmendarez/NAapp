@@ -3,10 +3,10 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { requireUser, tieneAccesoALocalidad, puedeUsarModuloRutas } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
-import { EnlaceForm } from "@/components/casillas/enlace-form";
+import { RutaForm } from "@/components/casillas/ruta-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default async function CapturarEnlacePage({
+export default async function CapturarRutaPage({
   params,
 }: {
   params: Promise<{ casillaId: string }>;
@@ -39,15 +39,22 @@ export default async function CapturarEnlacePage({
       <Card>
         <CardHeader>
           <CardTitle>
-            Enlace de casilla — Sección {casilla.seccion} · Distrito local{" "}
-            {casilla.distritoLocal}
+            Ruta — Sección {casilla.seccion} · Distrito local {casilla.distritoLocal}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <EnlaceForm
-            casillaId={casilla.id}
-            siguienteHref="/rutas"
-            existente={
+          <RutaForm
+            paradaInicial={{
+              id: casilla.id,
+              distritoLocal: casilla.distritoLocal,
+              municipio: casilla.municipio,
+              seccion: casilla.seccion,
+              tipoCasilla: casilla.tipoCasilla,
+              coloniaLocalidad: casilla.coloniaLocalidad,
+              ubicacion: casilla.ubicacion,
+              tieneEnlace: casilla.enlace !== null,
+            }}
+            personaExistente={
               casilla.enlace
                 ? {
                     nombre: casilla.enlace.nombre,

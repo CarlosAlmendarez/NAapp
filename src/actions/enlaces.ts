@@ -2,76 +2,135 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { obtenerCasillaConAccesoOrThrow } from "@/actions/casillas";
-import { requireRole } from "@/lib/auth-helpers";
+import {
+  requireUserOrThrow,
+  requireRole,
+  requireLocalidadAccess,
+} from "@/lib/auth-helpers";
 import { enlaceCasillaSchema } from "@/lib/validations/persona";
+import {
+  buscarCasillasParaRuta,
+  type CasillaBusquedaRuta,
+} from "@/lib/rutas-query";
 import { encryptField } from "@/lib/crypto";
 import { registrarAuditoria } from "@/lib/audit";
-import { ejecutarAccion, type ActionResult } from "@/lib/action-result";
+import { ejecutarAccion, AccionError, type ActionResult } from "@/lib/action-result";
+
+const ROLES_MODULO_RUTAS = ["ADMIN_GENERAL", "REPRESENTANTE_GENERAL"] as const;
 
 /**
- * Crea o edita el enlace de una casilla (módulo Rutas). Disponible para
- * Admin general y Representante General (RG) — siempre que la casilla
- * pertenezca a una localidad asignada al RG (verificado en
- * obtenerCasillaConAccesoOrThrow, nunca solo en la UI). No existe una
- * acción de borrado a propósito: una vez capturado un enlace se puede
- * corregir su contenido, pero no "deshacer" la parada de la ruta — igual
- * que con el catálogo de casillas, para proteger el registro contra
- * manipulación.
+ * Busca casillas dentro del alcance del usuario para agregarlas a una ruta
+ * en captura (ver RutaForm) — usada por el buscador de "+ agregar casilla".
  */
-export async function guardarEnlace(
-  casillaId: string,
-  formData: unknown
-): Promise<ActionResult<{ id: string }>> {
+export async function buscarCasillasRuta(
+  texto: string
+): Promise<ActionResult<CasillaBusquedaRuta[]>> {
   return ejecutarAccion(async () => {
-    const { usuario, casilla } = await obtenerCasillaConAccesoOrThrow(casillaId);
-    requireRole(usuario, ["ADMIN_GENERAL", "REPRESENTANTE_GENERAL"]);
+    const usuario = await requireUserOrThrow();
+    requireRole(usuario, [...ROLES_MODULO_RUTAS]);
+    return buscarCasillasParaRuta(usuario, texto);
+  });
+}
+
+/**
+ * Guarda el enlace de UNA persona en varias casillas a la vez (módulo
+ * Rutas): el Representante General (RG) captura los datos de contacto una
+ * sola vez y los replica a cada casilla que va encadenando en su ruta
+ * (ej. el mismo operador cubre varias casillas contiguas). Disponible
+ * para Admin general y RG — siempre que cada casilla pertenezca a una
+ * localidad asignada al RG (verificado abajo, nunca solo en la UI).
+ *
+ * A propósito sobrescribe el enlace de cualquier casilla que ya tuviera
+ * uno capturado (por este mismo usuario o por otro): agregar una casilla
+ * ya capturada a una ruta nueva reemplaza sus datos con los de la persona
+ * que se está capturando ahora. No existe una acción de borrado a
+ * propósito: una vez capturado un enlace se puede corregir su contenido,
+ * pero no "deshacer" la parada de la ruta — igual que con el catálogo de
+ * casillas, para proteger el registro contra manipulación.
+ */
+export async function guardarRutaEnlaces(
+  formData: unknown,
+  casillaIds: string[]
+): Promise<ActionResult<{ guardadas: number }>> {
+  return ejecutarAccion(async () => {
+    const usuario = await requireUserOrThrow();
+    requireRole(usuario, [...ROLES_MODULO_RUTAS]);
+
+    const idsUnicos = Array.from(new Set(casillaIds));
+    if (idsUnicos.length === 0) {
+      throw new AccionError("Agrega al menos una casilla a la ruta.");
+    }
+
     const datos = enlaceCasillaSchema.parse(formData);
 
-    const anterior = await prisma.enlaceCasilla.findUnique({
-      where: { casillaId: casilla.id },
+    const casillas = await prisma.casilla.findMany({
+      where: { id: { in: idsUnicos } },
+      include: { enlace: true },
     });
+    if (casillas.length !== idsUnicos.length) {
+      throw new AccionError("Alguna de las casillas seleccionadas ya no existe.");
+    }
+    for (const casilla of casillas) {
+      requireLocalidadAccess(usuario, casilla);
+    }
 
     const claveElectorCifrada = encryptField(datos.claveElector);
 
-    const enlace = await prisma.enlaceCasilla.upsert({
-      where: { casillaId: casilla.id },
-      create: {
-        casillaId: casilla.id,
-        nombre: datos.nombre,
-        apellidoPaterno: datos.apellidoPaterno,
-        apellidoMaterno: datos.apellidoMaterno,
-        claveElectorCifrada,
-        telefono: datos.telefono,
-        correoElectronico: datos.correoElectronico,
-        capturadoPorId: usuario.id,
-        updatedById: usuario.id,
-      },
-      update: {
-        nombre: datos.nombre,
-        apellidoPaterno: datos.apellidoPaterno,
-        apellidoMaterno: datos.apellidoMaterno,
-        claveElectorCifrada,
-        telefono: datos.telefono,
-        correoElectronico: datos.correoElectronico,
-        updatedById: usuario.id,
-        // capturadoEn/capturadoPorId NUNCA se tocan en el update: fijan el
-        // orden real de la ruta (cuándo se visitó esa casilla por primera
-        // vez), que no debe moverse solo porque se corrigió un dato.
-      },
-    });
+    await prisma.$transaction(
+      casillas.map((casilla) =>
+        prisma.enlaceCasilla.upsert({
+          where: { casillaId: casilla.id },
+          create: {
+            casillaId: casilla.id,
+            nombre: datos.nombre,
+            apellidoPaterno: datos.apellidoPaterno,
+            apellidoMaterno: datos.apellidoMaterno,
+            claveElectorCifrada,
+            telefono: datos.telefono,
+            correoElectronico: datos.correoElectronico,
+            capturadoPorId: usuario.id,
+            updatedById: usuario.id,
+          },
+          update: {
+            nombre: datos.nombre,
+            apellidoPaterno: datos.apellidoPaterno,
+            apellidoMaterno: datos.apellidoMaterno,
+            claveElectorCifrada,
+            telefono: datos.telefono,
+            correoElectronico: datos.correoElectronico,
+            updatedById: usuario.id,
+            // capturadoEn/capturadoPorId NUNCA se tocan en el update: fijan
+            // el orden real de la ruta (cuándo se visitó esa casilla por
+            // primera vez), que no debe moverse solo porque se corrigió o
+            // reemplazó el enlace.
+          },
+        })
+      )
+    );
 
-    await registrarAuditoria({
-      usuarioId: usuario.id,
-      accion: anterior ? "ACTUALIZAR" : "CREAR",
-      entidad: "EnlaceCasilla",
-      entidadId: enlace.id,
-      datosAntes: anterior ? { ...anterior, claveElectorCifrada: "[cifrado]" } : undefined,
-      datosDespues: { ...enlace, claveElectorCifrada: "[cifrado]" },
-    });
+    for (const casilla of casillas) {
+      await registrarAuditoria({
+        usuarioId: usuario.id,
+        accion: casilla.enlace ? "ACTUALIZAR" : "CREAR",
+        entidad: "EnlaceCasilla",
+        entidadId: casilla.id,
+        datosAntes: casilla.enlace
+          ? { ...casilla.enlace, claveElectorCifrada: "[cifrado]" }
+          : undefined,
+        datosDespues: {
+          casillaId: casilla.id,
+          nombre: datos.nombre,
+          apellidoPaterno: datos.apellidoPaterno,
+          claveElectorCifrada: "[cifrado]",
+        },
+      });
+    }
 
     revalidatePath("/rutas");
-    revalidatePath(`/casillas/${casilla.id}`);
-    return { id: enlace.id };
+    for (const casilla of casillas) {
+      revalidatePath(`/casillas/${casilla.id}`);
+    }
+
+    return { guardadas: casillas.length };
   });
 }

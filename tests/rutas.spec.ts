@@ -9,11 +9,15 @@ import {
 
 /**
  * Módulo de Rutas: el Representante General (RG) recorre las casillas de
- * su distrito local capturando el enlace de cada una, una por una y en el
- * orden que prefiera — contra la base de PRUEBA (ver npm run test:e2e).
- * Las casillas de prueba se crean con el Admin general (marcadas con
- * "PRUEBA-E2E" en `coloniaLocalidad`) para que tests/global-teardown.ts
- * las borre al terminar — el enlace se borra en cascada junto con ellas.
+ * su distrito local capturando los datos de UNA persona (el enlace) por
+ * formulario, y va encadenando hacia abajo las casillas a las que esa
+ * misma persona aplica (buscándolas por distrito, sección/nombre o
+ * municipio, con "+"/"-" para agregarlas o quitarlas) antes de guardar
+ * todas juntas con un solo botón — contra la base de PRUEBA (ver npm run
+ * test:e2e). Las casillas de prueba se crean con el Admin general
+ * (marcadas con "PRUEBA-E2E" en `coloniaLocalidad`) para que
+ * tests/global-teardown.ts las borre al terminar — el enlace se borra en
+ * cascada junto con ellas.
  */
 const MARCADOR = "PRUEBA-E2E";
 
@@ -83,7 +87,7 @@ async function capturarEnlace(
   await page.getByLabel("Apellido paterno").fill(datos.apellidoPaterno);
   await page.getByLabel(/Clave de elector/).fill(claveElectorDePrueba());
   await page.getByLabel("Teléfono").fill(datos.telefono);
-  await page.getByRole("button", { name: "Guardar enlace" }).click();
+  await page.getByRole("button", { name: "Guardar ruta" }).click();
   await page.waitForURL(/\/rutas$/);
 }
 
@@ -125,7 +129,7 @@ test.describe.serial("Rutas: captura, orden, validaciones y dashboard del RG", (
     await page.getByLabel("Apellido paterno").fill("Hernández");
     await page.getByLabel(/Clave de elector/).fill(claveElectorDePrueba());
     await page.getByLabel("Teléfono").fill("4441234567");
-    await page.getByRole("button", { name: "Guardar enlace" }).click();
+    await page.getByRole("button", { name: "Guardar ruta" }).click();
 
     await page.waitForURL(/\/rutas$/);
     await expect(page.getByText(`Sección ${seccion}`)).toBeVisible();
@@ -165,7 +169,7 @@ test.describe.serial("Rutas: captura, orden, validaciones y dashboard del RG", (
     await expect(page.getByLabel("Nombre(s)")).toHaveValue("Rosa");
     await page.getByLabel("Nombre(s)").fill("Rosa María");
     await page.getByLabel(/Clave de elector/).fill(claveElectorDePrueba());
-    await page.getByRole("button", { name: "Guardar enlace" }).click();
+    await page.getByRole("button", { name: "Guardar ruta" }).click();
 
     await page.waitForURL(/\/rutas$/);
     await expect(page.getByText("Rosa María Hernández")).toBeVisible();
@@ -370,7 +374,7 @@ test.describe.serial("Rutas: captura, orden, validaciones y dashboard del RG", (
     await page.goto(`/rutas/${casillaTres}`); // ya capturada, se intenta editar con datos malos
     await page.getByLabel("Teléfono").fill("123"); // menos de 10 dígitos
     await page.getByLabel(/Clave de elector/).fill(claveElectorDePrueba());
-    await page.getByRole("button", { name: "Guardar enlace" }).click();
+    await page.getByRole("button", { name: "Guardar ruta" }).click();
 
     await expect(page.getByText(/El teléfono debe tener 10 dígitos/)).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`/rutas/${casillaTres}$`)); // no navegó, no se guardó
@@ -381,7 +385,7 @@ test.describe.serial("Rutas: captura, orden, validaciones y dashboard del RG", (
     await page.goto(`/rutas/${casillaTres}`);
     await page.getByLabel(/Clave de elector/).fill("CORTA123"); // no llega a 18 caracteres
     await page.getByLabel("Teléfono").fill("4441234567");
-    await page.getByRole("button", { name: "Guardar enlace" }).click();
+    await page.getByRole("button", { name: "Guardar ruta" }).click();
 
     await expect(
       page.getByText(/La clave de elector debe tener 18 caracteres alfanuméricos/)
@@ -398,6 +402,124 @@ test.describe.serial("Rutas: captura, orden, validaciones y dashboard del RG", (
     await expect(page.getByLabel("Nombre(s)")).toHaveValue("Primero");
     await expect(page.getByLabel(/Clave de elector/)).toHaveValue("");
     await expect(page.getByText(/vuelve a capturarla para confirmarla/)).toBeVisible();
+  });
+
+  // --- Captura encadenada: una persona, varias casillas, un solo guardado ---
+
+  let casillaCadenaA = "";
+  let casillaCadenaB = "";
+  let seccionCadenaA = 0;
+  let seccionCadenaB = 0;
+
+  test("preparación: 2 casillas más para la captura encadenada", async ({ page }) => {
+    const a = await crearCasillaDePrueba(page, DISTRITO_RG, "SALINAS");
+    casillaCadenaA = a.casillaId;
+    seccionCadenaA = a.seccion;
+    const b = await crearCasillaDePrueba(page, DISTRITO_RG, "SALINAS", true);
+    casillaCadenaB = b.casillaId;
+    seccionCadenaB = b.seccion;
+  });
+
+  test("el RG encadena 2 casillas en /rutas/nueva y las guarda con un solo botón", async ({
+    page,
+  }) => {
+    await login(page, CREDENCIALES.rg);
+    await page.goto("/rutas/nueva");
+
+    await page.getByLabel("Nombre(s)").fill("Beatriz");
+    await page.getByLabel("Apellido paterno").fill("Cadena");
+    await page.getByLabel(/Clave de elector/).fill(claveElectorDePrueba());
+    await page.getByLabel("Teléfono").fill("4442223344");
+
+    // Buscar por sección y agregar la primera casilla.
+    await page.getByLabel(/Agregar casilla/).fill(String(seccionCadenaA));
+    await page
+      .getByRole("button", { name: `Agregar casilla sección ${seccionCadenaA}` })
+      .click();
+
+    // Buscar por municipio y agregar la segunda — se limpia el buscador
+    // solo al agregar la primera, así que este es un buscador nuevo.
+    await page.getByLabel(/Agregar casilla/).fill("SALINAS");
+    await page
+      .getByRole("button", { name: `Agregar casilla sección ${seccionCadenaB}` })
+      .click();
+
+    await expect(page.getByText("Casillas de esta ruta (2)")).toBeVisible();
+
+    await page.getByRole("button", { name: "Guardar ruta" }).click();
+    await page.waitForURL(/\/rutas$/);
+
+    const enlaceA = await prisma.enlaceCasilla.findUnique({
+      where: { casillaId: casillaCadenaA },
+    });
+    const enlaceB = await prisma.enlaceCasilla.findUnique({
+      where: { casillaId: casillaCadenaB },
+    });
+    expect(enlaceA?.nombre).toBe("Beatriz");
+    expect(enlaceB?.nombre).toBe("Beatriz");
+    expect(enlaceA?.telefono).toBe("4442223344");
+    expect(enlaceB?.telefono).toBe("4442223344");
+  });
+
+  let casillaCadenaC = "";
+  let casillaCadenaD = "";
+  let seccionCadenaC = 0;
+  let seccionCadenaD = 0;
+
+  test("preparación: 2 casillas más para probar quitar una de la cadena", async ({ page }) => {
+    const c = await crearCasillaDePrueba(page, DISTRITO_RG, "SALINAS");
+    casillaCadenaC = c.casillaId;
+    seccionCadenaC = c.seccion;
+    const d = await crearCasillaDePrueba(page, DISTRITO_RG, "SALINAS", true);
+    casillaCadenaD = d.casillaId;
+    seccionCadenaD = d.seccion;
+  });
+
+  test("quitar una casilla de la cadena con el botón de menos evita que se guarde", async ({
+    page,
+  }) => {
+    await login(page, CREDENCIALES.rg);
+    await page.goto("/rutas/nueva");
+
+    await page.getByLabel("Nombre(s)").fill("Sergio");
+    await page.getByLabel("Apellido paterno").fill("SoloUno");
+    await page.getByLabel(/Clave de elector/).fill(claveElectorDePrueba());
+    await page.getByLabel("Teléfono").fill("4445554433");
+
+    await page.getByLabel(/Agregar casilla/).fill(String(seccionCadenaC));
+    await page
+      .getByRole("button", { name: `Agregar casilla sección ${seccionCadenaC}` })
+      .click();
+    await page.getByLabel(/Agregar casilla/).fill(String(seccionCadenaD));
+    await page
+      .getByRole("button", { name: `Agregar casilla sección ${seccionCadenaD}` })
+      .click();
+    await expect(page.getByText("Casillas de esta ruta (2)")).toBeVisible();
+
+    await page
+      .getByRole("button", { name: `Quitar casilla sección ${seccionCadenaD}` })
+      .click();
+    await expect(page.getByText("Casillas de esta ruta (1)")).toBeVisible();
+
+    await page.getByRole("button", { name: "Guardar ruta" }).click();
+    await page.waitForURL(/\/rutas$/);
+
+    const enlaceC = await prisma.enlaceCasilla.findUnique({
+      where: { casillaId: casillaCadenaC },
+    });
+    const enlaceD = await prisma.enlaceCasilla.findUnique({
+      where: { casillaId: casillaCadenaD },
+    });
+    expect(enlaceC?.nombre).toBe("Sergio");
+    expect(enlaceD).toBeNull();
+  });
+
+  test("el botón de Guardar ruta está deshabilitado si no se ha agregado ninguna casilla", async ({
+    page,
+  }) => {
+    await login(page, CREDENCIALES.rg);
+    await page.goto("/rutas/nueva");
+    await expect(page.getByRole("button", { name: "Guardar ruta" })).toBeDisabled();
   });
 });
 
@@ -433,7 +555,7 @@ test.describe("Acceso al módulo de Rutas por rol y localidad", () => {
     await page.getByLabel("Apellido paterno").fill("Ramírez");
     await page.getByLabel(/Clave de elector/).fill(claveElectorDePrueba());
     await page.getByLabel("Teléfono").fill("4449876543");
-    await page.getByRole("button", { name: "Guardar enlace" }).click();
+    await page.getByRole("button", { name: "Guardar ruta" }).click();
 
     await page.waitForURL(/\/rutas$/);
     await expect(page.getByText("Luis Ramírez")).toBeVisible();

@@ -25,6 +25,19 @@ export type FiltrosRuta = {
   busqueda?: string;
 };
 
+export type CasillaBusquedaRuta = {
+  id: string;
+  distritoLocal: string;
+  municipio: string;
+  seccion: number;
+  tipoCasilla: string;
+  coloniaLocalidad: string;
+  ubicacion: string;
+  tieneEnlace: boolean;
+};
+
+const LIMITE_BUSQUEDA_RUTA = 8;
+
 /**
  * Casillas del módulo de Rutas dentro del alcance del usuario (mismo
  * filtro geográfico que /casillas — para RG, su(s) distrito(s) local(es)
@@ -73,4 +86,51 @@ export async function listarCasillasParaRuta(
     pendientes,
     total: casillas.length,
   };
+}
+
+/**
+ * Busca casillas dentro del alcance del usuario para encadenarlas a una
+ * ruta en captura (ver RutaForm) — por distrito local, municipio, sección
+ * o el nombre del inmueble/colonia. A propósito NO excluye las que ya
+ * tienen enlace capturado: se puede volver a agregar una casilla ya
+ * capturada a una ruta nueva para sobrescribir su enlace (ej. el mismo
+ * operador cubre varias casillas contiguas), por eso se marca con
+ * `tieneEnlace` en vez de ocultarla.
+ */
+export async function buscarCasillasParaRuta(
+  usuario: UsuarioAutenticado,
+  texto: string
+): Promise<CasillaBusquedaRuta[]> {
+  const termino = texto.trim();
+  if (termino === "") return [];
+
+  const and: Prisma.CasillaWhereInput[] = [filtroCasillasPorRol(usuario)];
+  const num = Number(termino);
+  and.push({
+    OR: [
+      { distritoLocal: { contains: termino, mode: "insensitive" } },
+      { municipio: { contains: termino, mode: "insensitive" } },
+      { ubicacion: { contains: termino, mode: "insensitive" } },
+      { coloniaLocalidad: { contains: termino, mode: "insensitive" } },
+      ...(Number.isFinite(num) ? [{ seccion: num }] : []),
+    ],
+  });
+
+  const casillas = await prisma.casilla.findMany({
+    where: { AND: and },
+    orderBy: [{ municipio: "asc" }, { seccion: "asc" }, { tipoCasilla: "asc" }],
+    take: LIMITE_BUSQUEDA_RUTA,
+    include: { enlace: { select: { id: true } } },
+  });
+
+  return casillas.map((c) => ({
+    id: c.id,
+    distritoLocal: c.distritoLocal,
+    municipio: c.municipio,
+    seccion: c.seccion,
+    tipoCasilla: c.tipoCasilla,
+    coloniaLocalidad: c.coloniaLocalidad,
+    ubicacion: c.ubicacion,
+    tieneEnlace: c.enlace !== null,
+  }));
 }

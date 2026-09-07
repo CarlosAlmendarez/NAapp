@@ -27,13 +27,18 @@ export default async function RutasPage({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Rutas</h1>
-        <p className="text-sm text-muted-foreground">
-          {total > 0
-            ? `${capturadas.length} de ${total} casilla(s) con enlace capturado en tu alcance.`
-            : "No hay casillas en tu alcance."}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Rutas</h1>
+          <p className="text-sm text-muted-foreground">
+            {total > 0
+              ? `${capturadas.length} de ${total} casilla(s) con enlace capturado en tu alcance.`
+              : "No hay casillas en tu alcance."}
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/rutas/nueva">Nueva ruta</Link>
+        </Button>
       </div>
 
       {total > 0 && (
