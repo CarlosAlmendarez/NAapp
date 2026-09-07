@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import {
@@ -76,6 +77,12 @@ export async function guardarRutaEnlaces(
 
     const claveElectorCifrada = encryptField(datos.claveElector);
 
+    // Todas las casillas guardadas en esta llamada forman UNA ruta — el
+    // orden dentro de ella es el orden en que el RG las fue agregando en
+    // el formulario (idsUnicos), no el orden en que Prisma las regrese.
+    const rutaId = randomUUID();
+    const ordenPorCasillaId = new Map(idsUnicos.map((id, indice) => [id, indice]));
+
     await prisma.$transaction(
       casillas.map((casilla) =>
         prisma.enlaceCasilla.upsert({
@@ -88,6 +95,8 @@ export async function guardarRutaEnlaces(
             claveElectorCifrada,
             telefono: datos.telefono,
             correoElectronico: datos.correoElectronico,
+            rutaId,
+            ordenEnRuta: ordenPorCasillaId.get(casilla.id) ?? 0,
             capturadoPorId: usuario.id,
             updatedById: usuario.id,
           },
@@ -98,6 +107,8 @@ export async function guardarRutaEnlaces(
             claveElectorCifrada,
             telefono: datos.telefono,
             correoElectronico: datos.correoElectronico,
+            rutaId,
+            ordenEnRuta: ordenPorCasillaId.get(casilla.id) ?? 0,
             updatedById: usuario.id,
             // capturadoEn/capturadoPorId NUNCA se tocan en el update: fijan
             // el orden real de la ruta (cuándo se visitó esa casilla por

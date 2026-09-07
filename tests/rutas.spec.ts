@@ -328,18 +328,15 @@ test.describe.serial("Rutas: captura, orden, validaciones y dashboard del RG", (
     seccionTres = tres.seccion;
   });
 
-  test("el orden de Capturadas refleja el orden real de captura, no la sección", async ({
+  test("las rutas capturadas se muestran en el orden real de captura, cada una como su propia tarjeta", async ({
     page,
   }) => {
-    // Ya van 3 enlaces capturados antes en esta misma cadena (la casilla
-    // original + A + B) — los badges de estas 3 nuevas empiezan donde esas
-    // dejaron, no en 1.
-    const antesDeCapturar = (await statsEsperadasDeRuta()).capturadas;
-
     await login(page, CREDENCIALES.rg);
 
     // Captura deliberadamente en un orden distinto al de creación/sección:
-    // Tres, luego Uno, luego Dos.
+    // Tres, luego Uno, luego Dos. Cada captura va sola (una casilla por
+    // llamada a /rutas/[casillaId]), así que cada una es su propia ruta de
+    // 1 casilla, no un grupo compartido con las otras dos.
     await capturarEnlace(page, casillaTres, {
       nombre: "Primero",
       apellidoPaterno: "EnCapturarse",
@@ -357,16 +354,22 @@ test.describe.serial("Rutas: captura, orden, validaciones y dashboard del RG", (
     });
 
     await page.goto("/rutas");
-    // En orden de captura (no de sección): Tres, luego Uno, luego Dos —
-    // con los badges consecutivos a partir de `antesDeCapturar`.
-    const seccionesEnOrden = [seccionTres, seccionUno, seccionDos];
-    for (let i = 0; i < seccionesEnOrden.length; i++) {
-      const fila = page
-        .locator("div.rounded-lg", { hasText: `Sección ${seccionesEnOrden[i]}` })
-        .filter({ hasText: "Capturado" });
-      const ordenEsperado = antesDeCapturar + i + 1;
-      await expect(fila.getByText(String(ordenEsperado), { exact: true })).toBeVisible();
+
+    // Cada captura aparece como su propia tarjeta "Ruta de ...", de 1 sola casilla.
+    for (const nombre of ["Primero EnCapturarse", "Segundo EnCapturarse", "Tercero EnCapturarse"]) {
+      const tarjeta = page.locator("div", { hasText: `Ruta de ${nombre}` }).last();
+      await expect(tarjeta.getByText("1 casilla", { exact: true })).toBeVisible();
     }
+
+    // Y aparecen en el orden real de captura (Tres, Uno, Dos) — no en el
+    // orden de creación/sección (Uno, Dos, Tres) ni el alfabético.
+    const contenido = await page.locator("main").innerText();
+    const posTres = contenido.indexOf(`Sección ${seccionTres}`);
+    const posUno = contenido.indexOf(`Sección ${seccionUno}`);
+    const posDos = contenido.indexOf(`Sección ${seccionDos}`);
+    expect(posTres).toBeGreaterThan(-1);
+    expect(posUno).toBeGreaterThan(posTres);
+    expect(posDos).toBeGreaterThan(posUno);
   });
 
   test("un teléfono inválido se rechaza sin guardar el enlace", async ({ page }) => {
@@ -459,6 +462,14 @@ test.describe.serial("Rutas: captura, orden, validaciones y dashboard del RG", (
     expect(enlaceB?.nombre).toBe("Beatriz");
     expect(enlaceA?.telefono).toBe("4442223344");
     expect(enlaceB?.telefono).toBe("4442223344");
+    // Las dos casillas quedaron en la MISMA ruta (mismo rutaId) — por eso
+    // se ven juntas en una sola tarjeta en /rutas, en vez de dos aparte.
+    expect(enlaceA?.rutaId).toBe(enlaceB?.rutaId);
+
+    const tarjeta = page.locator("div", { hasText: "Ruta de Beatriz Cadena" }).last();
+    await expect(tarjeta.getByText("2 casillas", { exact: true })).toBeVisible();
+    await expect(tarjeta.getByText(`Sección ${seccionCadenaA}`)).toBeVisible();
+    await expect(tarjeta.getByText(`Sección ${seccionCadenaB}`)).toBeVisible();
   });
 
   let casillaCadenaC = "";
@@ -512,6 +523,10 @@ test.describe.serial("Rutas: captura, orden, validaciones y dashboard del RG", (
     });
     expect(enlaceC?.nombre).toBe("Sergio");
     expect(enlaceD).toBeNull();
+
+    // Solo quedó una casilla en la ruta guardada — su tarjeta lo refleja.
+    const tarjeta = page.locator("div", { hasText: "Ruta de Sergio SoloUno" }).last();
+    await expect(tarjeta.getByText("1 casilla", { exact: true })).toBeVisible();
   });
 
   test("el botón de Guardar ruta está deshabilitado si no se ha agregado ninguna casilla", async ({

@@ -10,14 +10,26 @@ export type CasillaParaRuta = {
   seccion: number;
   tipoCasilla: string;
   coloniaLocalidad: string;
+};
+
+/**
+ * Una ruta capturada: todas las casillas guardadas juntas en una misma
+ * llamada a guardarRutaEnlaces (mismo `rutaId`) comparten los datos de UNA
+ * persona (el enlace) — por eso el nombre/teléfono/etc. vive una sola vez
+ * a nivel de la ruta, y no repetido por casilla como antes.
+ */
+export type RutaCapturada = {
+  rutaId: string;
+  capturadoEn: Date;
   enlace: {
     nombre: string;
     apellidoPaterno: string;
     apellidoMaterno: string | null;
     telefono: string;
     correoElectronico: string | null;
-    capturadoEn: Date;
-  } | null;
+  };
+  /** En el orden en que se agregaron al formulario (ver `ordenEnRuta`). */
+  casillas: CasillaParaRuta[];
 };
 
 export type FiltrosRuta = {
@@ -38,20 +50,42 @@ export type CasillaBusquedaRuta = {
 
 const LIMITE_BUSQUEDA_RUTA = 8;
 
+function casillaBase(c: {
+  id: string;
+  distritoLocal: string;
+  municipio: string;
+  seccion: number;
+  tipoCasilla: string;
+  coloniaLocalidad: string;
+}): CasillaParaRuta {
+  return {
+    id: c.id,
+    distritoLocal: c.distritoLocal,
+    municipio: c.municipio,
+    seccion: c.seccion,
+    tipoCasilla: c.tipoCasilla,
+    coloniaLocalidad: c.coloniaLocalidad,
+  };
+}
+
 /**
  * Casillas del módulo de Rutas dentro del alcance del usuario (mismo
  * filtro geográfico que /casillas — para RG, su(s) distrito(s) local(es)
- * asignado(s); para Admin general, sin restricción), separadas en
- * "capturadas" (ordenadas por `capturadoEn` ascendente — el orden real en
- * que se recorrió la ruta, que no se mueve al editar) y "pendientes"
- * (ordenadas por sección, igual que el listado general de casillas).
+ * asignado(s); para Admin general, sin restricción). Las capturadas se
+ * agrupan por `rutaId` — cada grupo es una ruta distinta, tal como se
+ * guardó desde RutaForm — y esos grupos se ordenan por `capturadoEn`
+ * ascendente (el orden real en que se recorrió cada ruta, que no se mueve
+ * al editar); dentro de cada ruta, las casillas van en `ordenEnRuta`. Las
+ * "pendientes" van aparte, ordenadas por sección, igual que el listado
+ * general de casillas.
  */
 export async function listarCasillasParaRuta(
   usuario: UsuarioAutenticado,
   filtros: FiltrosRuta
 ): Promise<{
-  capturadas: CasillaParaRuta[];
+  rutas: RutaCapturada[];
   pendientes: CasillaParaRuta[];
+  totalCapturadas: number;
   total: number;
 }> {
   const and: Prisma.CasillaWhereInput[] = [filtroCasillasPorRol(usuario)];
@@ -76,14 +110,39 @@ export async function listarCasillasParaRuta(
     include: { enlace: true },
   });
 
-  const capturadas = casillas
-    .filter((c): c is typeof c & { enlace: NonNullable<typeof c.enlace> } => c.enlace !== null)
-    .sort((a, b) => a.enlace.capturadoEn.getTime() - b.enlace.capturadoEn.getTime());
-  const pendientes = casillas.filter((c) => c.enlace === null);
+  const pendientes = casillas.filter((c) => c.enlace === null).map(casillaBase);
+
+  const capturadas = casillas.filter(
+    (c): c is typeof c & { enlace: NonNullable<typeof c.enlace> } => c.enlace !== null
+  );
+
+  const gruposPorRuta = new Map<string, typeof capturadas>();
+  for (const casilla of capturadas) {
+    const grupo = gruposPorRuta.get(casilla.enlace.rutaId);
+    if (grupo) grupo.push(casilla);
+    else gruposPorRuta.set(casilla.enlace.rutaId, [casilla]);
+  }
+
+  const rutas: RutaCapturada[] = Array.from(gruposPorRuta.values())
+    .map((grupo) => {
+      const { nombre, apellidoPaterno, apellidoMaterno, telefono, correoElectronico, capturadoEn, rutaId } =
+        grupo[0]!.enlace;
+      return {
+        rutaId,
+        capturadoEn,
+        enlace: { nombre, apellidoPaterno, apellidoMaterno, telefono, correoElectronico },
+        casillas: grupo
+          .slice()
+          .sort((a, b) => a.enlace.ordenEnRuta - b.enlace.ordenEnRuta)
+          .map((c) => casillaBase(c)),
+      };
+    })
+    .sort((a, b) => a.capturadoEn.getTime() - b.capturadoEn.getTime());
 
   return {
-    capturadas,
+    rutas,
     pendientes,
+    totalCapturadas: capturadas.length,
     total: casillas.length,
   };
 }

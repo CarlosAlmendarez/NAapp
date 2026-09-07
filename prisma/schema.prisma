@@ -224,14 +224,20 @@ model AsistenteElectoral {
   @@map("asistentes_electorales")
 }
 
-// Módulo "Rutas": el Representante General (RG) recorre las casillas de su
-// distrito local y va registrando, una por una y en el orden que prefiera,
-// al enlace/contacto de esa casilla (distinto del RC propietario/suplente
-// de RepresentanteCasilla). Como máximo un enlace por casilla — de ahí el
-// `@unique` en casillaId, a diferencia de AsistenteElectoral que sí admite
-// varios. El orden de la "ruta" mostrado en la UI es `capturadoEn`
-// ascendente, y no cambia al editar (solo `updatedAt` se mueve): se puede
-// corregir el contenido de una parada ya visitada, pero no deshacerla ni
+// Módulo "Rutas": el Representante General (RG) captura los datos de UNA
+// persona (el enlace/contacto, distinto del RC propietario/suplente de
+// RepresentanteCasilla) y los encadena hacia varias casillas a la vez
+// (ver RutaForm) — todas las que se guardan juntas en una sola llamada a
+// guardarRutaEnlaces comparten el mismo `rutaId` (un id generado por esa
+// llamada, no una tabla aparte: no hace falta más que agrupar/ordenar).
+// `ordenEnRuta` fija la posición de esa casilla dentro de su ruta (el
+// orden en que se fue agregando en el formulario). Como máximo un enlace
+// por casilla — de ahí el `@unique` en casillaId, a diferencia de
+// AsistenteElectoral que sí admite varios. El orden de las rutas
+// mostrado en la UI es `capturadoEn` ascendente, y no cambia al editar
+// (solo `updatedAt` se mueve): se puede corregir el contenido de una
+// parada ya visitada, o volver a agregarla a una ruta nueva (lo que
+// sobrescribe también su `rutaId`/`ordenEnRuta`), pero no deshacerla ni
 // quitarla de la ruta (no existe una acción de borrado para este modelo,
 // igual que con Casilla, para proteger el registro).
 model EnlaceCasilla {
@@ -248,6 +254,13 @@ model EnlaceCasilla {
   telefono           String
   correoElectronico  String?
 
+  // Agrupan esta casilla con las demás guardadas junto con ella en la
+  // misma ruta (ver comentario del modelo). Las capturas ya existentes
+  // antes de este campo se migraron con `rutaId = id` — cada una quedó
+  // como su propia ruta de una sola casilla.
+  rutaId      String
+  ordenEnRuta Int    @default(0)
+
   capturadoPorId String?
   capturadoPor   Usuario?  @relation("EnlaceCapturadoPor", fields: [capturadoPorId], references: [id])
   capturadoEn    DateTime  @default(now())
@@ -257,6 +270,7 @@ model EnlaceCasilla {
   updatedAt   DateTime @updatedAt
 
   @@index([casillaId])
+  @@index([rutaId])
   @@map("enlaces_casilla")
 }
 
