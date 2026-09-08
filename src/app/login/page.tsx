@@ -60,9 +60,9 @@ export default async function LoginPage({
         </CardContent>
       </Card>
 
-      <blockquote className="max-w-sm text-center">
-        <div className="mx-auto mb-3 h-px w-12 bg-gradient-to-r from-transparent via-accent to-transparent" />
-        <p className="font-display text-balance text-base italic leading-relaxed tracking-wide text-primary/80">
+      <blockquote className="max-w-md text-center">
+        <div className="mx-auto mb-4 h-1 w-20 rounded-full bg-gradient-to-r from-transparent via-accent to-transparent" />
+        <p className="font-display text-balance text-xl italic leading-relaxed tracking-wide text-primary/80 sm:text-2xl">
           &ldquo;Una estructura sólida, una estrategia coordinada y un objetivo común: harán de
           Nueva Alianza una fuerza competitiva en 2027&rdquo;
         </p>
