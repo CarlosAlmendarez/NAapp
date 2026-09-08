@@ -223,4 +223,48 @@ test.describe("Acceso a casillas por rol y localidad", () => {
     await page.goto("/casillas/nueva");
     await expect(page).toHaveURL(/\/casillas$/);
   });
+
+  // Un test por rol (no reutilizar `page` para varios login() seguidos: la
+  // sesión anterior sigue activa y /login solo redirige a /dashboard sin
+  // mostrar el formulario — ver la nota en tests/rutas.spec.ts sobre este
+  // mismo error ya encontrado antes).
+  for (const [nombreRol, credenciales, debeVerse] of [
+    ["Admin general", CREDENCIALES.adminGeneral, true],
+    ["Admin de casillas", CREDENCIALES.adminCasillas, true],
+    // Capturador y RG ya solo ven su(s) propio(s) distrito(s) asignado(s)
+    // — el buscador no les aporta nada, así que no se les muestra.
+    ["Capturador", CREDENCIALES.capturadorDistrito4, false],
+    ["Representante General", CREDENCIALES.rg, false],
+  ] as const) {
+    test(`buscador de distrito local en /casillas — ${nombreRol}: ${debeVerse ? "visible" : "no visible"}`, async ({
+      page,
+    }) => {
+      await login(page, credenciales);
+      await page.goto("/casillas");
+      const combobox = page.getByRole("combobox", { name: "Distrito local" });
+      if (debeVerse) {
+        await expect(combobox).toBeVisible();
+      } else {
+        await expect(combobox).toHaveCount(0);
+      }
+    });
+  }
+
+  test("filtrar por distrito local en /casillas muestra solo casillas de ese distrito", async ({
+    page,
+  }) => {
+    const totalReal = await prisma.casilla.count({ where: { distritoLocal: "2. SALINAS" } });
+    expect(totalReal).toBeGreaterThan(0);
+
+    await login(page, CREDENCIALES.adminGeneral);
+    await page.goto("/casillas");
+    await page.getByRole("combobox", { name: "Distrito local" }).click();
+    await page.getByRole("option", { name: "2. SALINAS" }).click();
+    await page.waitForURL(/distrito=/);
+
+    await expect(page.getByText(`${totalReal} casilla(s) en tu alcance.`)).toBeVisible();
+    await expect(page.getByText("Distrito local 2. SALINAS").first()).toBeVisible();
+    // Ninguna tarjeta visible debe ser de otro distrito.
+    await expect(page.getByText(/^Distrito local (?!2\. SALINAS)/)).toHaveCount(0);
+  });
 });

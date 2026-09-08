@@ -34,6 +34,7 @@ export type RutaCapturada = {
 
 export type FiltrosRuta = {
   municipio?: string;
+  distrito?: string;
   busqueda?: string;
 };
 
@@ -92,6 +93,10 @@ export async function listarCasillasParaRuta(
 
   if (filtros.municipio) {
     and.push({ municipio: filtros.municipio });
+  }
+
+  if (filtros.distrito) {
+    and.push({ distritoLocal: filtros.distrito });
   }
 
   if (filtros.busqueda) {

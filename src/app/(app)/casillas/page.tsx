@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { requireUser, puedeAdministrarCasillas } from "@/lib/auth-helpers";
-import { listarCasillas, municipiosDisponibles } from "@/lib/casillas-query";
+import { requireUser, puedeAdministrarCasillas, sinRestriccionGeografica } from "@/lib/auth-helpers";
+import { listarCasillas, municipiosDisponibles, distritosDisponibles } from "@/lib/casillas-query";
 import { CasillasFiltro } from "@/components/casillas/casillas-filtro";
 import { CasillaCard } from "@/components/casillas/casilla-card";
 import { Pagination } from "@/components/ui/pagination";
@@ -11,25 +11,37 @@ import { Card, CardContent } from "@/components/ui/card";
 export default async function CasillasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ municipio?: string; busqueda?: string; page?: string }>;
+  searchParams: Promise<{
+    municipio?: string;
+    distrito?: string;
+    busqueda?: string;
+    page?: string;
+  }>;
 }) {
   const usuario = await requireUser();
   const params = await searchParams;
 
   const puedeCrear = puedeAdministrarCasillas(usuario);
+  // El buscador por distrito local solo tiene sentido para roles sin
+  // restricción geográfica (Admin general, Admin de casillas): un
+  // Capturador o RG ya solo ve su(s) propio(s) distrito(s) asignado(s).
+  const esAdmin = sinRestriccionGeografica(usuario);
 
-  const [{ casillas, total, page, totalPages }, municipios] = await Promise.all([
+  const [{ casillas, total, page, totalPages }, municipios, distritos] = await Promise.all([
     listarCasillas(usuario, {
       municipio: params.municipio,
+      distrito: params.distrito,
       busqueda: params.busqueda,
       page: params.page ? Number(params.page) : 1,
     }),
     municipiosDisponibles(usuario),
+    esAdmin ? distritosDisponibles(usuario) : Promise.resolve(undefined),
   ]);
 
   function buildHref(nuevaPagina: number) {
     const sp = new URLSearchParams();
     if (params.municipio) sp.set("municipio", params.municipio);
+    if (params.distrito) sp.set("distrito", params.distrito);
     if (params.busqueda) sp.set("busqueda", params.busqueda);
     sp.set("page", String(nuevaPagina));
     return `/casillas?${sp.toString()}`;
@@ -52,7 +64,7 @@ export default async function CasillasPage({
         )}
       </div>
 
-      <CasillasFiltro municipios={municipios} />
+      <CasillasFiltro municipios={municipios} distritos={distritos} />
 
       {casillas.length === 0 ? (
         <Card>

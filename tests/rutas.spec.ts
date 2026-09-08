@@ -603,4 +603,18 @@ test.describe("Acceso al módulo de Rutas por rol y localidad", () => {
     await login(page, CREDENCIALES.capturadorDistrito12);
     await expect(page.getByRole("link", { name: "Rutas" })).toHaveCount(0);
   });
+
+  test("Admin general ve el buscador de distrito local en /rutas", async ({ page }) => {
+    await login(page, CREDENCIALES.adminGeneral);
+    await page.goto("/rutas");
+    await expect(page.getByRole("combobox", { name: "Distrito local" })).toBeVisible();
+  });
+
+  test("el RG NO ve el buscador de distrito local en /rutas (ya está acotado al suyo)", async ({
+    page,
+  }) => {
+    await login(page, CREDENCIALES.rg);
+    await page.goto("/rutas");
+    await expect(page.getByRole("combobox", { name: "Distrito local" })).toHaveCount(0);
+  });
 });

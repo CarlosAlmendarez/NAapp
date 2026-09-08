@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { requireUser, puedeUsarModuloRutas } from "@/lib/auth-helpers";
+import { requireUser, puedeUsarModuloRutas, sinRestriccionGeografica } from "@/lib/auth-helpers";
 import { listarCasillasParaRuta, type CasillaParaRuta, type RutaCapturada } from "@/lib/rutas-query";
-import { municipiosDisponibles } from "@/lib/casillas-query";
+import { municipiosDisponibles, distritosDisponibles } from "@/lib/casillas-query";
 import { CasillasFiltro } from "@/components/casillas/casillas-filtro";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,16 +13,21 @@ import { formatTipoCasilla, varianteTipoCasilla } from "@/lib/tipo-casilla";
 export default async function RutasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ municipio?: string; busqueda?: string }>;
+  searchParams: Promise<{ municipio?: string; distrito?: string; busqueda?: string }>;
 }) {
   const usuario = await requireUser();
   if (!puedeUsarModuloRutas(usuario)) redirect("/dashboard");
 
   const params = await searchParams;
+  // El buscador por distrito local solo tiene sentido para roles sin
+  // restricción geográfica (Admin general): un RG ya solo ve su(s)
+  // propio(s) distrito(s) asignado(s).
+  const esAdmin = sinRestriccionGeografica(usuario);
 
-  const [{ rutas, pendientes, totalCapturadas, total }, municipios] = await Promise.all([
+  const [{ rutas, pendientes, totalCapturadas, total }, municipios, distritos] = await Promise.all([
     listarCasillasParaRuta(usuario, params),
     municipiosDisponibles(usuario),
+    esAdmin ? distritosDisponibles(usuario) : Promise.resolve(undefined),
   ]);
 
   return (
@@ -50,7 +55,7 @@ export default async function RutasPage({
         </div>
       )}
 
-      <CasillasFiltro municipios={municipios} />
+      <CasillasFiltro municipios={municipios} distritos={distritos} />
 
       {total === 0 ? (
         <Card>

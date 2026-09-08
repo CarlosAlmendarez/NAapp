@@ -11,6 +11,7 @@ const PAGE_SIZE = 20;
 
 export type FiltrosCasillas = {
   municipio?: string;
+  distrito?: string;
   busqueda?: string;
   page?: number;
 };
@@ -26,6 +27,10 @@ export async function listarCasillas(usuario: UsuarioAutenticado, filtros: Filtr
 
   if (filtros.municipio) {
     and.push({ municipio: filtros.municipio });
+  }
+
+  if (filtros.distrito) {
+    and.push({ distritoLocal: filtros.distrito });
   }
 
   if (filtros.busqueda) {
@@ -84,4 +89,25 @@ export async function municipiosDisponibles(usuario: UsuarioAutenticado): Promis
     distinct: ["municipio"],
   });
   return filas.map((f) => f.municipio).sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Distritos locales disponibles para el selector de filtro — mismo criterio
+ * que `municipiosDisponibles`, pero pensado para roles sin restricción
+ * geográfica (Admin general, Admin de casillas): un Capturador o RG ya solo
+ * ve su(s) propio(s) distrito(s) asignado(s), así que este filtro no les
+ * aporta nada y las páginas que lo usan solo lo muestran a los admins.
+ */
+export async function distritosDisponibles(usuario: UsuarioAutenticado): Promise<string[]> {
+  if (sinRestriccionGeografica(usuario)) {
+    const distritos = await prisma.distritoLocal.findMany({ orderBy: { nombre: "asc" } });
+    return distritos.map((d) => d.nombre);
+  }
+
+  const filas = await prisma.casilla.findMany({
+    where: filtroCasillasPorRol(usuario),
+    select: { distritoLocal: true },
+    distinct: ["distritoLocal"],
+  });
+  return filas.map((f) => f.distritoLocal).sort((a, b) => a.localeCompare(b));
 }
