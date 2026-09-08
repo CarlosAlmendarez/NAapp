@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Download } from "lucide-react";
 import { requireUser, puedeAdministrarCasillas, sinRestriccionGeografica } from "@/lib/auth-helpers";
 import { listarCasillas, municipiosDisponibles, distritosDisponibles } from "@/lib/casillas-query";
 import { CasillasFiltro } from "@/components/casillas/casillas-filtro";
@@ -54,14 +54,27 @@ export default async function CasillasPage({
           <h1 className="text-2xl font-semibold text-foreground">Casillas</h1>
           <p className="text-sm text-muted-foreground">{total} casilla(s) en tu alcance.</p>
         </div>
-        {puedeCrear && (
-          <Button asChild>
-            <Link href="/casillas/nueva">
-              <Plus className="h-4 w-4" />
-              Nueva casilla
-            </Link>
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Exportar el catálogo completo (padrón oficial + RC ya
+              capturado) — solo Admin general, ni siquiera Admin de
+              casillas ni RG. La clave de elector nunca se incluye. */}
+          {usuario.rol === "ADMIN_GENERAL" && (
+            <Button asChild variant="outline">
+              <a href="/api/exportar/casillas">
+                <Download className="h-4 w-4" />
+                Exportar XLSX
+              </a>
+            </Button>
+          )}
+          {puedeCrear && (
+            <Button asChild>
+              <Link href="/casillas/nueva">
+                <Plus className="h-4 w-4" />
+                Nueva casilla
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <CasillasFiltro municipios={municipios} distritos={distritos} />

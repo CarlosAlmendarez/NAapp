@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Download } from "lucide-react";
 import { redirect } from "next/navigation";
 import { requireUser, puedeUsarModuloRutas, sinRestriccionGeografica } from "@/lib/auth-helpers";
 import { listarCasillasParaRuta, type CasillaParaRuta, type RutaCapturada } from "@/lib/rutas-query";
@@ -41,9 +42,21 @@ export default async function RutasPage({
               : "No hay casillas en tu alcance."}
           </p>
         </div>
-        <Button asChild>
-          <Link href="/rutas/nueva">Nueva ruta</Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Solo Admin general — ni siquiera el RG que captura las
+              rutas. La clave de elector nunca se incluye. */}
+          {usuario.rol === "ADMIN_GENERAL" && (
+            <Button asChild variant="outline">
+              <a href="/api/exportar/rutas">
+                <Download className="h-4 w-4" />
+                Exportar XLSX
+              </a>
+            </Button>
+          )}
+          <Button asChild>
+            <Link href="/rutas/nueva">Nueva ruta</Link>
+          </Button>
+        </div>
       </div>
 
       {total > 0 && (
