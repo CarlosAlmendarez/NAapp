@@ -43,6 +43,14 @@ export default async function LoginPage({
           <LoginForm />
         </CardContent>
       </Card>
+
+      <blockquote className="max-w-sm text-center">
+        <div className="mx-auto mb-3 h-px w-10 bg-accent" />
+        <p className="text-sm italic leading-relaxed text-muted-foreground">
+          &ldquo;Una estructura sólida, una estrategia coordinada y un objetivo común: harán de
+          Nueva Alianza una fuerza competitiva en 2027&rdquo;
+        </p>
+      </blockquote>
     </div>
   );
 }
