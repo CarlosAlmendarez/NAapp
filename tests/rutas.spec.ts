@@ -328,18 +328,15 @@ test.describe.serial("Rutas: captura, orden, validaciones y dashboard del RG", (
     seccionTres = tres.seccion;
   });
 
-  test("el orden de Capturadas refleja el orden real de captura, no la sección", async ({
+  test("las rutas capturadas se muestran en el orden real de captura, cada una como su propia tarjeta", async ({
     page,
   }) => {
-    // Ya van 3 enlaces capturados antes en esta misma cadena (la casilla
-    // original + A + B) — los badges de estas 3 nuevas empiezan donde esas
-    // dejaron, no en 1.
-    const antesDeCapturar = (await statsEsperadasDeRuta()).capturadas;
-
     await login(page, CREDENCIALES.rg);
 
     // Captura deliberadamente en un orden distinto al de creación/sección:
-    // Tres, luego Uno, luego Dos.
+    // Tres, luego Uno, luego Dos. Cada captura va sola (una casilla por
+    // llamada a /rutas/[casillaId]), así que cada una es su propia ruta de
+    // 1 casilla, no un grupo compartido con las otras dos.
     await capturarEnlace(page, casillaTres, {
       nombre: "Primero",
       apellidoPaterno: "EnCapturarse",
@@ -357,16 +354,22 @@ test.describe.serial("Rutas: captura, orden, validaciones y dashboard del RG", (
     });
 
     await page.goto("/rutas");
-    // En orden de captura (no de sección): Tres, luego Uno, luego Dos —
-    // con los badges consecutivos a partir de `antesDeCapturar`.
-    const seccionesEnOrden = [seccionTres, seccionUno, seccionDos];
-    for (let i = 0; i < seccionesEnOrden.length; i++) {
-      const fila = page
-        .locator("div.rounded-lg", { hasText: `Sección ${seccionesEnOrden[i]}` })
-        .filter({ hasText: "Capturado" });
-      const ordenEsperado = antesDeCapturar + i + 1;
-      await expect(fila.getByText(String(ordenEsperado), { exact: true })).toBeVisible();
+
+    // Cada captura aparece como su propia tarjeta "Ruta de ...", de 1 sola casilla.
+    for (const nombre of ["Primero EnCapturarse", "Segundo EnCapturarse", "Tercero EnCapturarse"]) {
+      const tarjeta = page.locator("div", { hasText: `Ruta de ${nombre}` }).last();
+      await expect(tarjeta.getByText("1 casilla", { exact: true })).toBeVisible();
     }
+
+    // Y aparecen en el orden real de captura (Tres, Uno, Dos) — no en el
+    // orden de creación/sección (Uno, Dos, Tres) ni el alfabético.
+    const contenido = await page.locator("main").innerText();
+    const posTres = contenido.indexOf(`Sección ${seccionTres}`);
+    const posUno = contenido.indexOf(`Sección ${seccionUno}`);
+    const posDos = contenido.indexOf(`Sección ${seccionDos}`);
+    expect(posTres).toBeGreaterThan(-1);
+    expect(posUno).toBeGreaterThan(posTres);
+    expect(posDos).toBeGreaterThan(posUno);
   });
 
   test("un teléfono inválido se rechaza sin guardar el enlace", async ({ page }) => {
@@ -437,9 +440,13 @@ test.describe.serial("Rutas: captura, orden, validaciones y dashboard del RG", (
       .getByRole("button", { name: `Agregar casilla sección ${seccionCadenaA}` })
       .click();
 
-    // Buscar por municipio y agregar la segunda — se limpia el buscador
-    // solo al agregar la primera, así que este es un buscador nuevo.
-    await page.getByLabel(/Agregar casilla/).fill("SALINAS");
+    // Buscar la segunda por su sección exacta — igual que arriba. Buscar
+    // por nombre de municipio ("SALINAS") NO sirve aquí: es un municipio
+    // real del catálogo con muchas más de 8 casillas reales (todas con
+    // sección mucho menor a las ~90000-98999 que usa seccionDePrueba()),
+    // así que el límite de 8 resultados del buscador nunca alcanza a
+    // devolver una casilla de prueba al ordenar por sección ascendente.
+    await page.getByLabel(/Agregar casilla/).fill(String(seccionCadenaB));
     await page
       .getByRole("button", { name: `Agregar casilla sección ${seccionCadenaB}` })
       .click();
@@ -459,6 +466,20 @@ test.describe.serial("Rutas: captura, orden, validaciones y dashboard del RG", (
     expect(enlaceB?.nombre).toBe("Beatriz");
     expect(enlaceA?.telefono).toBe("4442223344");
     expect(enlaceB?.telefono).toBe("4442223344");
+    // Las dos casillas quedaron en la MISMA ruta (mismo rutaId) — por eso
+    // se ven juntas en una sola tarjeta en /rutas, en vez de dos aparte.
+    expect(enlaceA?.rutaId).toBe(enlaceB?.rutaId);
+
+    // OJO: "div", {hasText} + .last() no sirve aquí — el CardHeader interno
+    // (que solo trae el título, no las secciones) también matchea hasText y
+    // queda DESPUÉS del Card exterior en orden de documento, así que
+    // .last() lo agarra a él en vez de la tarjeta completa. `.border-l-4`
+    // es la clase que solo tiene el Card exterior de TarjetaRuta (ver
+    // src/app/(app)/rutas/page.tsx), así que la identifica sin ambigüedad.
+    const tarjeta = page.locator("div.border-l-4", { hasText: "Ruta de Beatriz Cadena" });
+    await expect(tarjeta.getByText("2 casillas", { exact: true })).toBeVisible();
+    await expect(tarjeta.getByText(`Sección ${seccionCadenaA}`)).toBeVisible();
+    await expect(tarjeta.getByText(`Sección ${seccionCadenaB}`)).toBeVisible();
   });
 
   let casillaCadenaC = "";
@@ -512,6 +533,11 @@ test.describe.serial("Rutas: captura, orden, validaciones y dashboard del RG", (
     });
     expect(enlaceC?.nombre).toBe("Sergio");
     expect(enlaceD).toBeNull();
+
+    // Solo quedó una casilla en la ruta guardada — su tarjeta lo refleja.
+    // Ver la nota sobre .border-l-4 en la prueba de "Beatriz Cadena" arriba.
+    const tarjeta = page.locator("div.border-l-4", { hasText: "Ruta de Sergio SoloUno" });
+    await expect(tarjeta.getByText("1 casilla", { exact: true })).toBeVisible();
   });
 
   test("el botón de Guardar ruta está deshabilitado si no se ha agregado ninguna casilla", async ({

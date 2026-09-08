@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireUser, puedeUsarModuloRutas } from "@/lib/auth-helpers";
-import { listarCasillasParaRuta, type CasillaParaRuta } from "@/lib/rutas-query";
+import { listarCasillasParaRuta, type CasillaParaRuta, type RutaCapturada } from "@/lib/rutas-query";
 import { municipiosDisponibles } from "@/lib/casillas-query";
 import { CasillasFiltro } from "@/components/casillas/casillas-filtro";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { nombreCompleto, formatFecha } from "@/lib/utils";
@@ -20,7 +20,7 @@ export default async function RutasPage({
 
   const params = await searchParams;
 
-  const [{ capturadas, pendientes, total }, municipios] = await Promise.all([
+  const [{ rutas, pendientes, totalCapturadas, total }, municipios] = await Promise.all([
     listarCasillasParaRuta(usuario, params),
     municipiosDisponibles(usuario),
   ]);
@@ -32,7 +32,7 @@ export default async function RutasPage({
           <h1 className="text-2xl font-semibold text-foreground">Rutas</h1>
           <p className="text-sm text-muted-foreground">
             {total > 0
-              ? `${capturadas.length} de ${total} casilla(s) con enlace capturado en tu alcance.`
+              ? `${totalCapturadas} de ${total} casilla(s) con enlace capturado en tu alcance, en ${rutas.length} ruta(s).`
               : "No hay casillas en tu alcance."}
           </p>
         </div>
@@ -45,7 +45,7 @@ export default async function RutasPage({
         <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full bg-primary transition-all"
-            style={{ width: `${Math.round((capturadas.length / total) * 100)}%` }}
+            style={{ width: `${Math.round((totalCapturadas / total) * 100)}%` }}
           />
         </div>
       )}
@@ -60,18 +60,14 @@ export default async function RutasPage({
         </Card>
       ) : (
         <div className="space-y-6">
-          {capturadas.length > 0 && (
+          {rutas.length > 0 && (
             <div className="space-y-3">
               <h2 className="text-sm font-semibold text-muted-foreground">
-                Capturadas, en orden de tu recorrido
+                Rutas capturadas, en orden de tu recorrido
               </h2>
-              <div className="space-y-2">
-                {capturadas.map((casilla, indice) => (
-                  <FilaRuta
-                    key={casilla.id}
-                    casilla={casilla}
-                    orden={indice + 1}
-                  />
+              <div className="space-y-3">
+                {rutas.map((ruta) => (
+                  <TarjetaRuta key={ruta.rutaId} ruta={ruta} />
                 ))}
               </div>
             </div>
@@ -82,7 +78,7 @@ export default async function RutasPage({
               <h2 className="text-sm font-semibold text-muted-foreground">Pendientes</h2>
               <div className="space-y-2">
                 {pendientes.map((casilla) => (
-                  <FilaRuta key={casilla.id} casilla={casilla} />
+                  <FilaCasillaPendiente key={casilla.id} casilla={casilla} />
                 ))}
               </div>
             </div>
@@ -93,43 +89,76 @@ export default async function RutasPage({
   );
 }
 
-function FilaRuta({ casilla, orden }: { casilla: CasillaParaRuta; orden?: number }) {
-  const capturada = casilla.enlace !== null;
+/**
+ * Cada ruta guardada junta desde RutaForm se muestra como su propia
+ * tarjeta — distinta de las demás — con los datos del enlace UNA sola vez
+ * arriba y la lista de casillas que le corresponden abajo, en el orden en
+ * que se agregaron.
+ */
+function TarjetaRuta({ ruta }: { ruta: RutaCapturada }) {
+  return (
+    <Card className="border-l-4 border-l-primary">
+      <CardHeader className="space-y-1.5">
+        <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+          Ruta de {nombreCompleto(ruta.enlace)}
+          <Badge variant="secondary">
+            {ruta.casillas.length} {ruta.casillas.length === 1 ? "casilla" : "casillas"}
+          </Badge>
+        </CardTitle>
+        <p className="text-xs text-muted-foreground">
+          Capturada el {formatFecha(ruta.capturadoEn)} · Tel: {ruta.enlace.telefono}
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {ruta.casillas.map((casilla, indice) => (
+          <div
+            key={casilla.id}
+            className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                {indice + 1}
+              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium text-foreground">Sección {casilla.seccion}</p>
+                  <Badge variant={varianteTipoCasilla(casilla.tipoCasilla)}>
+                    {formatTipoCasilla(casilla.tipoCasilla)}
+                  </Badge>
+                </div>
+                <p className="truncate text-xs text-muted-foreground">
+                  {casilla.municipio} · {casilla.coloniaLocalidad}
+                </p>
+              </div>
+            </div>
+            <Button asChild variant="outline" size="sm" className="shrink-0">
+              <Link href={`/rutas/${casilla.id}`}>Editar</Link>
+            </Button>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
 
+function FilaCasillaPendiente({ casilla }: { casilla: CasillaParaRuta }) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            {orden !== undefined && (
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                {orden}
-              </span>
-            )}
             <p className="font-medium text-foreground">Sección {casilla.seccion}</p>
             <Badge variant={varianteTipoCasilla(casilla.tipoCasilla)}>
               {formatTipoCasilla(casilla.tipoCasilla)}
             </Badge>
-            <Badge variant={capturada ? "success" : "outline"}>
-              {capturada ? "Capturado" : "Pendiente"}
-            </Badge>
+            <Badge variant="outline">Pendiente</Badge>
           </div>
           <p className="truncate text-sm text-muted-foreground">
             {casilla.municipio} · {casilla.coloniaLocalidad}
           </p>
-          {casilla.enlace && (
-            <>
-              <p className="truncate text-sm text-foreground">
-                {nombreCompleto(casilla.enlace)} · Tel: {casilla.enlace.telefono}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Capturado el {formatFecha(casilla.enlace.capturadoEn)}
-              </p>
-            </>
-          )}
         </div>
-        <Button asChild variant={capturada ? "outline" : "default"} size="sm" className="shrink-0">
-          <Link href={`/rutas/${casilla.id}`}>{capturada ? "Editar" : "Capturar"}</Link>
+        <Button asChild size="sm" className="shrink-0">
+          <Link href={`/rutas/${casilla.id}`}>Capturar</Link>
         </Button>
       </CardContent>
     </Card>
