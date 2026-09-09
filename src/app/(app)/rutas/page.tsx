@@ -4,8 +4,6 @@ import { redirect } from "next/navigation";
 import { requireUser, puedeUsarModuloRutas, sinRestriccionGeografica } from "@/lib/auth-helpers";
 import { listarCasillasParaRuta, type CasillaParaRuta, type RutaCapturada } from "@/lib/rutas-query";
 import { municipiosDisponibles, distritosDisponibles } from "@/lib/casillas-query";
-import { requireCasaActiva } from "@/lib/casa-server";
-import { CASA_LABEL } from "@/lib/casa";
 import { CasillasFiltro } from "@/components/casillas/casillas-filtro";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +18,6 @@ export default async function RutasPage({
 }) {
   const usuario = await requireUser();
   if (!puedeUsarModuloRutas(usuario)) redirect("/dashboard");
-  const casa = await requireCasaActiva();
 
   const params = await searchParams;
   // El buscador por distrito local solo tiene sentido para roles sin
@@ -29,7 +26,7 @@ export default async function RutasPage({
   const esAdmin = sinRestriccionGeografica(usuario);
 
   const [{ rutas, pendientes, totalCapturadas, total }, municipios, distritos] = await Promise.all([
-    listarCasillasParaRuta(usuario, casa, params),
+    listarCasillasParaRuta(usuario, params),
     municipiosDisponibles(usuario),
     esAdmin ? distritosDisponibles(usuario) : Promise.resolve(undefined),
   ]);
@@ -40,7 +37,6 @@ export default async function RutasPage({
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Rutas</h1>
           <p className="text-sm text-muted-foreground">
-            {CASA_LABEL[casa]} ·{" "}
             {total > 0
               ? `${totalCapturadas} de ${total} casilla(s) con enlace capturado en tu alcance, en ${rutas.length} ruta(s).`
               : "No hay casillas en tu alcance."}
@@ -115,18 +111,24 @@ export default async function RutasPage({
  * Cada ruta guardada junta desde RutaForm se muestra como su propia
  * tarjeta — distinta de las demás — con los datos del enlace UNA sola vez
  * arriba y la lista de casillas que le corresponden abajo, en el orden en
- * que se agregaron.
+ * que se agregaron. "Editar ruta" abre el formulario con TODAS las
+ * casillas de la ruta cargadas (no de una en una).
  */
 function TarjetaRuta({ ruta }: { ruta: RutaCapturada }) {
   return (
     <Card className="border-l-4 border-l-primary">
       <CardHeader className="space-y-1.5">
-        <CardTitle className="flex flex-wrap items-center gap-2 text-base">
-          Ruta de {nombreCompleto(ruta.enlace)}
-          <Badge variant="secondary">
-            {ruta.casillas.length} {ruta.casillas.length === 1 ? "casilla" : "casillas"}
-          </Badge>
-        </CardTitle>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+            Ruta de {nombreCompleto(ruta.enlace)}
+            <Badge variant="secondary">
+              {ruta.casillas.length} {ruta.casillas.length === 1 ? "casilla" : "casillas"}
+            </Badge>
+          </CardTitle>
+          <Button asChild variant="outline" size="sm" className="shrink-0">
+            <Link href={`/rutas/editar/${ruta.rutaId}`}>Editar ruta</Link>
+          </Button>
+        </div>
         <p className="text-xs text-muted-foreground">
           Capturada el {formatFecha(ruta.capturadoEn)} · Tel: {ruta.enlace.telefono}
         </p>
@@ -135,27 +137,22 @@ function TarjetaRuta({ ruta }: { ruta: RutaCapturada }) {
         {ruta.casillas.map((casilla, indice) => (
           <div
             key={casilla.id}
-            className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between"
+            className="flex items-center gap-2 rounded-lg border border-border bg-card p-3"
           >
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                {indice + 1}
-              </span>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-medium text-foreground">Sección {casilla.seccion}</p>
-                  <Badge variant={varianteTipoCasilla(casilla.tipoCasilla)}>
-                    {formatTipoCasilla(casilla.tipoCasilla)}
-                  </Badge>
-                </div>
-                <p className="truncate text-xs text-muted-foreground">
-                  {casilla.municipio} · {casilla.coloniaLocalidad}
-                </p>
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+              {indice + 1}
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-medium text-foreground">Sección {casilla.seccion}</p>
+                <Badge variant={varianteTipoCasilla(casilla.tipoCasilla)}>
+                  {formatTipoCasilla(casilla.tipoCasilla)}
+                </Badge>
               </div>
+              <p className="truncate text-xs text-muted-foreground">
+                {casilla.municipio} · {casilla.coloniaLocalidad}
+              </p>
             </div>
-            <Button asChild variant="outline" size="sm" className="shrink-0">
-              <Link href={`/rutas/${casilla.id}`}>Editar</Link>
-            </Button>
           </div>
         ))}
       </CardContent>

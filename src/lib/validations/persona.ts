@@ -27,6 +27,8 @@ const nombrePersonaSchema = {
     .trim()
     .toUpperCase()
     .regex(CLAVE_ELECTOR_REGEX, "La clave de elector debe tener 18 caracteres alfanuméricos."),
+  // Opcional a nivel base; RC y enlace de Rutas lo vuelven obligatorio
+  // (ver `correoObligatorio`).
   correoElectronico: z
     .string()
     .trim()
@@ -48,8 +50,18 @@ const nombrePersonaSchema = {
     .transform((v) => (v ? v : undefined)),
 };
 
+// Correo obligatorio — se exige en la captura de RC (casilla) y de enlace
+// (rutas).
+const correoObligatorio = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(1, "El correo electrónico es obligatorio.")
+  .email("Correo inválido.");
+
 export const representanteSchema = z.object({
   ...nombrePersonaSchema,
+  correoElectronico: correoObligatorio,
   tipo: z.enum(["PROPIETARIO", "SUPLENTE"]),
   propone: z
     .string()
@@ -87,7 +99,7 @@ export const enlaceCasillaSchema = z.object({
     .trim()
     .transform((v) => normalizarTelefonoMx(v))
     .refine((v) => v.length === 10, "El teléfono debe tener 10 dígitos (número de México)."),
-  correoElectronico: nombrePersonaSchema.correoElectronico,
+  correoElectronico: correoObligatorio,
 });
 
 export type EnlaceCasillaInput = z.infer<typeof enlaceCasillaSchema>;

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { requireUser, tieneAccesoALocalidad, puedeUsarModuloRutas } from "@/lib/auth-helpers";
@@ -9,6 +9,11 @@ import { obtenerResumenRcDeCasillas } from "@/lib/rutas-query";
 import { RutaForm } from "@/components/casillas/ruta-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+/**
+ * Inicia una ruta NUEVA a partir de UNA casilla (desde "Pendientes" o el
+ * atajo del detalle de la casilla). Si esa casilla ya tiene enlace, se
+ * redirige a la edición de su ruta completa: no se recaptura.
+ */
 export default async function CapturarRutaPage({
   params,
 }: {
@@ -18,19 +23,21 @@ export default async function CapturarRutaPage({
   const casa = await requireCasaActiva();
   const { casillaId } = await params;
 
-  // Solo Admin general y Representante General usan el módulo de Rutas —
-  // ni siquiera deben ver el formulario (la Server Action también lo
-  // bloquea, pero no hay razón para dejarlos llegar hasta aquí).
+  // Solo Admin general y Representante General usan el módulo de Rutas.
   if (!puedeUsarModuloRutas(usuario)) notFound();
 
   const casilla = await prisma.casilla.findUnique({
     where: { id: casillaId },
-    include: { enlaces: { where: { casa } } },
+    include: { enlace: true },
   });
   if (!casilla) notFound();
   if (!tieneAccesoALocalidad(usuario, casilla)) notFound();
 
-  const enlace = casilla.enlaces[0] ?? null;
+  // Ya tiene enlace: no se recaptura, se edita la ruta completa.
+  if (casilla.enlace) {
+    redirect(`/rutas/editar/${casilla.enlace.rutaId}`);
+  }
+
   const resumenRc = await obtenerResumenRcDeCasillas(
     [{ id: casilla.id, distritoLocal: casilla.distritoLocal }],
     casa
@@ -50,35 +57,24 @@ export default async function CapturarRutaPage({
       <Card>
         <CardHeader>
           <CardTitle>
-            Ruta — Sección {casilla.seccion} · Distrito local {casilla.distritoLocal} ·{" "}
-            {CASA_LABEL[casa]}
+            Nueva ruta — Sección {casilla.seccion} · Distrito local {casilla.distritoLocal}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <RutaForm
             casaLabel={CASA_LABEL[casa]}
-            paradaInicial={{
-              id: casilla.id,
-              distritoLocal: casilla.distritoLocal,
-              municipio: casilla.municipio,
-              seccion: casilla.seccion,
-              tipoCasilla: casilla.tipoCasilla,
-              coloniaLocalidad: casilla.coloniaLocalidad,
-              ubicacion: casilla.ubicacion,
-              tieneEnlace: enlace !== null,
-              rc,
-            }}
-            personaExistente={
-              enlace
-                ? {
-                    nombre: enlace.nombre,
-                    apellidoPaterno: enlace.apellidoPaterno,
-                    apellidoMaterno: enlace.apellidoMaterno,
-                    telefono: enlace.telefono,
-                    correoElectronico: enlace.correoElectronico,
-                  }
-                : undefined
-            }
+            paradasIniciales={[
+              {
+                id: casilla.id,
+                distritoLocal: casilla.distritoLocal,
+                municipio: casilla.municipio,
+                seccion: casilla.seccion,
+                tipoCasilla: casilla.tipoCasilla,
+                coloniaLocalidad: casilla.coloniaLocalidad,
+                ubicacion: casilla.ubicacion,
+                rc,
+              },
+            ]}
           />
         </CardContent>
       </Card>

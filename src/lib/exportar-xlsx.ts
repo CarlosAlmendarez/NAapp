@@ -175,12 +175,13 @@ const ENCABEZADO_COLUMNAS_RUTA = [
  * columnas en blanco, en el orden normal del catálogo.
  */
 export async function construirLibroRutas(casa: Casa): Promise<Buffer> {
-  const casillasRaw = await prisma.casilla.findMany({
+  // El RC es por casa (se filtra); el enlace de Rutas es único por casilla
+  // (no por casa).
+  const casillas = await prisma.casilla.findMany({
     orderBy: [{ municipio: "asc" }, { seccion: "asc" }, { tipoCasilla: "asc" }],
-    include: { representantes: { where: { casa } }, enlaces: { where: { casa } } },
+    include: { representantes: { where: { casa } }, enlace: true },
   });
   const numeroCasa = CASA_NUMERO[casa];
-  const casillas = casillasRaw.map((c) => ({ ...c, enlace: c.enlaces[0] ?? null }));
 
   const capturadas = casillas.filter((c) => c.enlace !== null);
   const pendientes = casillas.filter((c) => c.enlace === null);

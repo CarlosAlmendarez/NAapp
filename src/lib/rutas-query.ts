@@ -63,7 +63,6 @@ export type CasillaBusquedaRuta = {
   tipoCasilla: string;
   coloniaLocalidad: string;
   ubicacion: string;
-  tieneEnlace: boolean;
   rc: RcResumenCasilla;
 };
 
@@ -168,11 +167,11 @@ export async function obtenerResumenRcDeCasillas(
  * ascendente (el orden real en que se recorrió cada ruta, que no se mueve
  * al editar); dentro de cada ruta, las casillas van en `ordenEnRuta`. Las
  * "pendientes" van aparte, ordenadas por sección, igual que el listado
- * general de casillas. Todo se acota a la casa activa (26 / 52).
+ * general de casillas. El módulo de Rutas NO se acota por casa: el
+ * enlace/RG es único por casilla y compartido entre Casa 26 y Casa 52.
  */
 export async function listarCasillasParaRuta(
   usuario: UsuarioAutenticado,
-  casa: Casa,
   filtros: FiltrosRuta
 ): Promise<{
   rutas: RutaCapturada[];
@@ -203,14 +202,12 @@ export async function listarCasillasParaRuta(
   const casillas = await prisma.casilla.findMany({
     where: { AND: and },
     orderBy: [{ municipio: "asc" }, { seccion: "asc" }, { tipoCasilla: "asc" }],
-    include: { enlaces: { where: { casa } } },
+    include: { enlace: true },
   });
 
-  const conEnlace = casillas.map((c) => ({ ...c, enlace: c.enlaces[0] ?? null }));
+  const pendientes = casillas.filter((c) => c.enlace === null).map(casillaBase);
 
-  const pendientes = conEnlace.filter((c) => c.enlace === null).map(casillaBase);
-
-  const capturadas = conEnlace.filter(
+  const capturadas = casillas.filter(
     (c): c is typeof c & { enlace: NonNullable<typeof c.enlace> } => c.enlace !== null
   );
 
@@ -248,12 +245,11 @@ export async function listarCasillasParaRuta(
 /**
  * Busca casillas dentro del alcance del usuario para encadenarlas a una
  * ruta en captura (ver RutaForm) — por distrito local, municipio, sección
- * o el nombre del inmueble/colonia. A propósito NO excluye las que ya
- * tienen enlace capturado: se puede volver a agregar una casilla ya
- * capturada a una ruta nueva para sobrescribir su enlace (ej. el mismo
- * operador cubre varias casillas contiguas), por eso se marca con
- * `tieneEnlace` en vez de ocultarla. Cada resultado incluye el resumen de
- * RC/RG de esa casilla en la casa activa (contexto para el RG).
+ * o el nombre del inmueble/colonia. EXCLUYE las casillas que ya tienen
+ * enlace capturado: el enlace/RG es único por casilla y no se recaptura
+ * (para corregirlo se usa "Editar ruta"). Cada resultado incluye el
+ * resumen de RC/RG de esa casilla en la casa activa (contexto para el RG;
+ * el RC sí es por casa).
  */
 export async function buscarCasillasParaRuta(
   usuario: UsuarioAutenticado,
@@ -263,7 +259,11 @@ export async function buscarCasillasParaRuta(
   const termino = texto.trim();
   if (termino === "") return [];
 
-  const and: Prisma.CasillaWhereInput[] = [filtroCasillasPorRol(usuario)];
+  const and: Prisma.CasillaWhereInput[] = [
+    filtroCasillasPorRol(usuario),
+    // Solo casillas SIN enlace: no se puede tener dos ni recapturar.
+    { enlace: { is: null } },
+  ];
   const num = Number(termino);
   and.push({
     OR: [
@@ -279,7 +279,6 @@ export async function buscarCasillasParaRuta(
     where: { AND: and },
     orderBy: [{ municipio: "asc" }, { seccion: "asc" }, { tipoCasilla: "asc" }],
     take: LIMITE_BUSQUEDA_RUTA,
-    include: { enlaces: { where: { casa }, select: { id: true } } },
   });
 
   const resumenRc = await obtenerResumenRcDeCasillas(
@@ -295,7 +294,6 @@ export async function buscarCasillasParaRuta(
     tipoCasilla: c.tipoCasilla,
     coloniaLocalidad: c.coloniaLocalidad,
     ubicacion: c.ubicacion,
-    tieneEnlace: c.enlaces.length > 0,
     rc: resumenRc.get(c.id) ?? { propietario: null, suplente: null, rgNombre: null },
   }));
 }

@@ -103,12 +103,13 @@ export function RepresentanteForm({
           <FieldError messages={fieldErrors.claveElector} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="correoElectronico">Correo electrónico (opcional)</Label>
+          <Label htmlFor="correoElectronico">Correo electrónico</Label>
           <Input
             id="correoElectronico"
             name="correoElectronico"
             type="email"
             defaultValue={existente?.correoElectronico ?? ""}
+            required
           />
           <FieldError messages={fieldErrors.correoElectronico} />
         </div>

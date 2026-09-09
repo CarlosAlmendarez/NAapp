@@ -25,7 +25,8 @@ export default async function CasillaDetallePage({
     where: { id },
     include: {
       representantes: { where: { casa }, orderBy: { tipo: "asc" } },
-      enlaces: { where: { casa } },
+      // El enlace de Rutas es único por casilla (no por casa).
+      enlace: true,
     },
   });
 
@@ -37,7 +38,7 @@ export default async function CasillaDetallePage({
     notFound();
   }
 
-  const enlace = casilla.enlaces[0] ?? null;
+  const enlace = casilla.enlace;
   // Cambio 2: a quien captura RC se le muestra quién es el RG de esta
   // casilla en esta casa. El RC suplente solo se ofrece si NO hay RG.
   const rg = await obtenerRgDeCasilla(casilla.distritoLocal, casa);
@@ -148,9 +149,7 @@ export default async function CasillaDetallePage({
 
       {puedeVerEnlace && (
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-foreground">
-            Enlace de casilla (Ruta) — {CASA_LABEL[casa]}
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground">Enlace de casilla (Ruta)</h2>
           <EnlaceResumen casillaId={casilla.id} enlace={enlace} />
         </div>
       )}
@@ -170,6 +169,7 @@ function EnlaceResumen({
     telefono: string;
     correoElectronico: string | null;
     capturadoEn: Date;
+    rutaId: string;
   } | null;
 }) {
   return (
@@ -195,7 +195,9 @@ function EnlaceResumen({
           )}
         </div>
         <Button asChild variant={enlace ? "outline" : "default"} size="sm">
-          <Link href={`/rutas/${casillaId}`}>{enlace ? "Editar" : "Capturar"}</Link>
+          <Link href={enlace ? `/rutas/editar/${enlace.rutaId}` : `/rutas/${casillaId}`}>
+            {enlace ? "Editar ruta" : "Capturar"}
+          </Link>
         </Button>
       </CardContent>
     </Card>

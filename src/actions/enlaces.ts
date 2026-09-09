@@ -23,6 +23,9 @@ const ROLES_MODULO_RUTAS = ["ADMIN_GENERAL", "REPRESENTANTE_GENERAL"] as const;
 /**
  * Busca casillas dentro del alcance del usuario para agregarlas a una ruta
  * en captura (ver RutaForm) — usada por el buscador de "+ agregar casilla".
+ * Excluye las casillas que YA tienen enlace (una casilla no puede tener
+ * dos: el enlace/RG es único por casilla). El `casa` solo se usa para
+ * mostrar el contexto del RC (que sí es por casa).
  */
 export async function buscarCasillasRuta(
   texto: string
@@ -44,24 +47,21 @@ export async function buscarCasillasRuta(
  * para Admin general y RG — siempre que cada casilla pertenezca a una
  * localidad asignada al RG (verificado abajo, nunca solo en la UI).
  *
- * A propósito sobrescribe el enlace de cualquier casilla que ya tuviera
- * uno capturado (por este mismo usuario o por otro): agregar una casilla
- * ya capturada a una ruta nueva reemplaza sus datos con los de la persona
- * que se está capturando ahora. No existe una acción de borrado a
- * propósito: una vez capturado un enlace se puede corregir su contenido,
- * pero no "deshacer" la parada de la ruta — igual que con el catálogo de
- * casillas, para proteger el registro contra manipulación.
+ * El enlace es ÚNICO por casilla (sin importar la casa): una casilla que
+ * ya tiene enlace NO puede recapturarse. Con `rutaId` se edita una ruta
+ * existente — sus casillas ya guardadas se corrigen y se pueden agregar
+ * más (que deben estar libres); sin `rutaId` se crea una ruta nueva y
+ * TODAS las casillas deben estar libres. No existe borrado: no se puede
+ * quitar una parada ya guardada de su ruta.
  */
 export async function guardarRutaEnlaces(
   formData: unknown,
-  casillaIds: string[]
+  casillaIds: string[],
+  rutaId?: string
 ): Promise<ActionResult<{ guardadas: number }>> {
   return ejecutarAccion(async () => {
     const usuario = await requireUserOrThrow();
     requireRole(usuario, [...ROLES_MODULO_RUTAS]);
-
-    const casa = await obtenerCasaActiva();
-    if (!casa) throw new AccionError("Elige una casa (26 o 52) antes de capturar.");
 
     const idsUnicos = Array.from(new Set(casillaIds));
     if (idsUnicos.length === 0) {
@@ -72,7 +72,7 @@ export async function guardarRutaEnlaces(
 
     const casillas = await prisma.casilla.findMany({
       where: { id: { in: idsUnicos } },
-      include: { enlaces: { where: { casa } } },
+      include: { enlace: true },
     });
     if (casillas.length !== idsUnicos.length) {
       throw new AccionError("Alguna de las casillas seleccionadas ya no existe.");
@@ -81,28 +81,51 @@ export async function guardarRutaEnlaces(
       requireLocalidadAccess(usuario, casilla);
     }
 
+    // Al editar una ruta se reutiliza su `rutaId`; al crear una nueva se
+    // genera uno.
+    let rutaIdFinal: string;
+    if (rutaId) {
+      const pertenece = casillas.filter((c) => c.enlace?.rutaId === rutaId);
+      if (pertenece.length === 0) {
+        throw new AccionError("La ruta que intentas editar ya no existe.");
+      }
+      rutaIdFinal = rutaId;
+    } else {
+      rutaIdFinal = randomUUID();
+    }
+
+    // Ninguna casilla NUEVA (que no fuera ya parte de esta ruta) puede
+    // tener un enlace: el enlace/RG es único por casilla y no se recaptura.
+    const recaptura = casillas.find(
+      (c) => c.enlace !== null && c.enlace.rutaId !== rutaIdFinal
+    );
+    if (recaptura) {
+      throw new AccionError(
+        `La casilla de la sección ${recaptura.seccion} ya tiene un enlace capturado; ` +
+          "no se puede volver a tomar. Corrígela desde “Editar ruta”."
+      );
+    }
+
     const claveElectorCifrada = encryptField(datos.claveElector);
 
-    // Todas las casillas guardadas en esta llamada forman UNA ruta — el
-    // orden dentro de ella es el orden en que el RG las fue agregando en
-    // el formulario (idsUnicos), no el orden en que Prisma las regrese.
-    const rutaId = randomUUID();
+    // El orden dentro de la ruta es el orden en que vienen las casillas
+    // (idsUnicos): al editar, primero las que ya estaban (en su orden) y
+    // luego las nuevas.
     const ordenPorCasillaId = new Map(idsUnicos.map((id, indice) => [id, indice]));
 
     await prisma.$transaction(
       casillas.map((casilla) =>
         prisma.enlaceCasilla.upsert({
-          where: { casillaId_casa: { casillaId: casilla.id, casa } },
+          where: { casillaId: casilla.id },
           create: {
             casillaId: casilla.id,
-            casa,
             nombre: datos.nombre,
             apellidoPaterno: datos.apellidoPaterno,
             apellidoMaterno: datos.apellidoMaterno,
             claveElectorCifrada,
             telefono: datos.telefono,
             correoElectronico: datos.correoElectronico,
-            rutaId,
+            rutaId: rutaIdFinal,
             ordenEnRuta: ordenPorCasillaId.get(casilla.id) ?? 0,
             capturadoPorId: usuario.id,
             updatedById: usuario.id,
@@ -114,7 +137,7 @@ export async function guardarRutaEnlaces(
             claveElectorCifrada,
             telefono: datos.telefono,
             correoElectronico: datos.correoElectronico,
-            rutaId,
+            rutaId: rutaIdFinal,
             ordenEnRuta: ordenPorCasillaId.get(casilla.id) ?? 0,
             updatedById: usuario.id,
             // capturadoEn/capturadoPorId NUNCA se tocan en el update: fijan
@@ -127,18 +150,17 @@ export async function guardarRutaEnlaces(
     );
 
     for (const casilla of casillas) {
-      const enlacePrevio = casilla.enlaces[0] ?? null;
       await registrarAuditoria({
         usuarioId: usuario.id,
-        accion: enlacePrevio ? "ACTUALIZAR" : "CREAR",
+        accion: casilla.enlace ? "ACTUALIZAR" : "CREAR",
         entidad: "EnlaceCasilla",
         entidadId: casilla.id,
-        datosAntes: enlacePrevio
-          ? { ...enlacePrevio, claveElectorCifrada: "[cifrado]" }
+        datosAntes: casilla.enlace
+          ? { ...casilla.enlace, claveElectorCifrada: "[cifrado]" }
           : undefined,
         datosDespues: {
           casillaId: casilla.id,
-          casa,
+          rutaId: rutaIdFinal,
           nombre: datos.nombre,
           apellidoPaterno: datos.apellidoPaterno,
           claveElectorCifrada: "[cifrado]",

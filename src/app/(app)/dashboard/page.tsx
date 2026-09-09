@@ -19,7 +19,7 @@ export default async function DashboardPage() {
   // siempre. Todo acotado a la casa activa.
   const esRG = usuario.rol === "REPRESENTANTE_GENERAL";
   const stats = esRG ? null : await obtenerEstadisticas(usuario, casa);
-  const statsRuta = esRG ? await obtenerEstadisticasRuta(usuario, casa) : null;
+  const statsRuta = esRG ? await obtenerEstadisticasRuta(usuario) : null;
 
   return (
     <div className="space-y-6">

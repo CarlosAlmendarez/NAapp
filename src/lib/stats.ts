@@ -63,21 +63,21 @@ export type EstadisticasRuta = {
 
 /**
  * Estadísticas del módulo de Rutas (enlace por casilla), respetando el
- * alcance del usuario y la casa activa — a diferencia de
- * `obtenerEstadisticas`, que cuenta RC propietario/suplente. El
- * Representante General nunca captura RC (ni siquiera lo ve), así que su
- * dashboard debe usar esta función y no la de arriba: mostrarle "0% de
- * avance" contando datos que nunca toca sería confuso y falso.
+ * alcance del usuario — a diferencia de `obtenerEstadisticas`, que cuenta
+ * RC propietario/suplente. El Representante General nunca captura RC (ni
+ * siquiera lo ve), así que su dashboard debe usar esta función y no la de
+ * arriba: mostrarle "0% de avance" contando datos que nunca toca sería
+ * confuso y falso. El enlace es único por casilla (no por casa), así que
+ * esta cuenta no se acota por casa.
  */
 export async function obtenerEstadisticasRuta(
-  usuario: UsuarioAutenticado,
-  casa: Casa
+  usuario: UsuarioAutenticado
 ): Promise<EstadisticasRuta> {
   const filtro = filtroCasillasPorRol(usuario);
 
   const [totalCasillas, enlacesCapturados] = await Promise.all([
     prisma.casilla.count({ where: filtro }),
-    prisma.enlaceCasilla.count({ where: { casa, casilla: filtro } }),
+    prisma.enlaceCasilla.count({ where: { casilla: filtro } }),
   ]);
 
   return {

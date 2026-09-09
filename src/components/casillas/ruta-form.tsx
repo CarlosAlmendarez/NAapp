@@ -26,21 +26,26 @@ type PersonaExistente = {
 
 /**
  * Captura del módulo de Rutas: UNA sola persona (el enlace) cuyos datos se
- * van replicando hacia abajo a cada casilla que el RG agrega a su ruta con
- * el buscador de abajo — en vez de un formulario por casilla, se guardan
- * todas juntas al final con "Guardar ruta". Si `paradaInicial` viene dada
- * (al entrar desde /rutas/[casillaId]) esa casilla arranca ya en la lista,
- * para poder editarla sola o seguir encadenando más desde ahí.
+ * replican a cada casilla de la ruta. `paradasIniciales` arranca la lista
+ * ya poblada: una sola casilla al entrar desde /rutas/[casillaId] (ruta
+ * nueva), o TODAS las de la ruta al entrar desde /rutas/editar/[rutaId].
+ * Con `rutaId` se está editando una ruta existente: sus casillas ya
+ * guardadas no se pueden quitar (solo corregir) y se pueden agregar más
+ * casillas libres.
  */
 export function RutaForm({
   casaLabel,
-  paradaInicial,
+  rutaId,
+  paradasIniciales,
   personaExistente,
 }: {
   casaLabel: string;
-  paradaInicial?: ParadaInicial;
+  rutaId?: string;
+  paradasIniciales?: ParadaInicial[];
   personaExistente?: PersonaExistente;
 }) {
+  const esEdicion = Boolean(rutaId);
+  const idsFijos = new Set((paradasIniciales ?? []).map((p) => p.id));
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -55,9 +60,7 @@ export function RutaForm({
     personaExistente?.correoElectronico ?? ""
   );
 
-  const [paradas, setParadas] = useState<ParadaInicial[]>(
-    paradaInicial ? [paradaInicial] : []
-  );
+  const [paradas, setParadas] = useState<ParadaInicial[]>(paradasIniciales ?? []);
 
   const [busqueda, setBusqueda] = useState("");
   const [resultados, setResultados] = useState<ParadaInicial[]>([]);
@@ -119,7 +122,8 @@ export function RutaForm({
     startTransition(async () => {
       const resultado = await guardarRutaEnlaces(
         datos,
-        paradas.map((p) => p.id)
+        paradas.map((p) => p.id),
+        rutaId
       );
       if (!resultado.success) {
         setError(resultado.error);
@@ -201,12 +205,13 @@ export function RutaForm({
             <FieldError messages={fieldErrors.telefono} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="correoElectronico">Correo electrónico (opcional)</Label>
+            <Label htmlFor="correoElectronico">Correo electrónico</Label>
             <Input
               id="correoElectronico"
               type="email"
               value={correoElectronico}
               onChange={(e) => setCorreoElectronico(e.target.value)}
+              required
             />
             <FieldError messages={fieldErrors.correoElectronico} />
           </div>
@@ -218,46 +223,61 @@ export function RutaForm({
           Casillas de esta ruta{paradas.length > 0 && ` (${paradas.length})`}
         </h2>
 
+        {esEdicion && (
+          <p className="text-xs text-muted-foreground">
+            Estás editando una ruta ya guardada. Puedes corregir los datos del enlace y
+            agregar más casillas; las que ya forman parte de la ruta no se pueden quitar.
+          </p>
+        )}
+
         {paradas.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Busca una casilla abajo y agrégala para empezar tu ruta.
           </p>
         ) : (
           <ol className="space-y-2">
-            {paradas.map((parada, indice) => (
-              <li
-                key={parada.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3"
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                    {indice + 1}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium text-foreground">Sección {parada.seccion}</p>
-                      <Badge variant={varianteTipoCasilla(parada.tipoCasilla)}>
-                        {formatTipoCasilla(parada.tipoCasilla)}
-                      </Badge>
-                      {parada.tieneEnlace && <Badge variant="success">Ya capturada</Badge>}
-                    </div>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {parada.municipio} · {parada.distritoLocal} · {parada.coloniaLocalidad}
-                    </p>
-                    <RcContexto rc={parada.rc} casaLabel={casaLabel} />
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Quitar casilla sección ${parada.seccion}`}
-                  onClick={() => quitarCasilla(parada.id)}
+            {paradas.map((parada, indice) => {
+              // Solo al editar una ruta existente sus casillas quedan fijas
+              // (no se pueden quitar); al crear una ruta nueva todas se
+              // pueden quitar.
+              const fija = esEdicion && idsFijos.has(parada.id);
+              return (
+                <li
+                  key={parada.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3"
                 >
-                  <X className="h-4 w-4" />
-                </Button>
-              </li>
-            ))}
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                      {indice + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-foreground">Sección {parada.seccion}</p>
+                        <Badge variant={varianteTipoCasilla(parada.tipoCasilla)}>
+                          {formatTipoCasilla(parada.tipoCasilla)}
+                        </Badge>
+                        {fija && <Badge variant="secondary">En la ruta</Badge>}
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {parada.municipio} · {parada.distritoLocal} · {parada.coloniaLocalidad}
+                      </p>
+                      <RcContexto rc={parada.rc} casaLabel={casaLabel} />
+                    </div>
+                  </div>
+                  {!fija && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Quitar casilla sección ${parada.seccion}`}
+                      onClick={() => quitarCasilla(parada.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </li>
+              );
+            })}
           </ol>
         )}
 
@@ -295,9 +315,6 @@ export function RutaForm({
                             <Badge variant={varianteTipoCasilla(resultado.tipoCasilla)}>
                               {formatTipoCasilla(resultado.tipoCasilla)}
                             </Badge>
-                            {resultado.tieneEnlace && (
-                              <Badge variant="success">Ya capturada</Badge>
-                            )}
                           </div>
                           <p className="truncate text-xs text-muted-foreground">
                             {resultado.municipio} · {resultado.distritoLocal} ·{" "}
@@ -325,7 +342,11 @@ export function RutaForm({
       </div>
 
       <Button type="button" onClick={guardar} disabled={isPending || paradas.length === 0}>
-        {isPending ? "Guardando…" : "Guardar ruta"}
+        {isPending
+          ? "Guardando…"
+          : esEdicion
+            ? "Guardar cambios de la ruta"
+            : "Guardar ruta"}
       </Button>
     </div>
   );
