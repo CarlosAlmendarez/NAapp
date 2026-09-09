@@ -22,13 +22,22 @@ export const CREDENCIALES = {
 
 export async function login(
   page: Page,
-  usuario: { correo: string; password: string }
+  usuario: { correo: string; password: string },
+  casa: "26" | "52" = "26"
 ): Promise<void> {
   await page.goto("/login");
   await page.getByLabel("Correo institucional").fill(usuario.correo);
   await page.getByLabel("Contraseña").fill(usuario.password);
   await page.getByRole("button", { name: /entrar/i }).click();
   await page.waitForURL(/\/dashboard/);
+
+  // Tras iniciar sesión aparece la puerta "¿En qué casa vas a capturar?"
+  // mientras no haya cookie `casa`. Se elige una para poder seguir.
+  const botonCasa = page.getByRole("button", { name: new RegExp(`Casa ${casa}`) }).first();
+  if (await botonCasa.isVisible().catch(() => false)) {
+    await botonCasa.click();
+    await page.getByText(new RegExp(`Estás capturando en Casa ${casa}`, "i")).waitFor();
+  }
 }
 
 /** Sección alta y aleatoria — fuera del rango real (~1 a ~2500) para no chocar con el catálogo. */

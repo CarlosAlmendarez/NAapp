@@ -4,7 +4,8 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { buscarCasillasRuta, guardarRutaEnlaces } from "@/actions/enlaces";
-import type { CasillaBusquedaRuta } from "@/lib/rutas-query";
+import type { CasillaBusquedaRuta, RcResumenCasilla } from "@/lib/rutas-query";
+import { nombreCompleto } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,9 +33,11 @@ type PersonaExistente = {
  * para poder editarla sola o seguir encadenando más desde ahí.
  */
 export function RutaForm({
+  casaLabel,
   paradaInicial,
   personaExistente,
 }: {
+  casaLabel: string;
   paradaInicial?: ParadaInicial;
   personaExistente?: PersonaExistente;
 }) {
@@ -144,6 +147,7 @@ export function RutaForm({
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               required
+              uppercase
             />
             <FieldError messages={fieldErrors.nombre} />
           </div>
@@ -154,6 +158,7 @@ export function RutaForm({
               value={apellidoPaterno}
               onChange={(e) => setApellidoPaterno(e.target.value)}
               required
+              uppercase
             />
             <FieldError messages={fieldErrors.apellidoPaterno} />
           </div>
@@ -163,6 +168,7 @@ export function RutaForm({
               id="apellidoMaterno"
               value={apellidoMaterno}
               onChange={(e) => setApellidoMaterno(e.target.value)}
+              uppercase
             />
             <FieldError messages={fieldErrors.apellidoMaterno} />
           </div>
@@ -174,6 +180,7 @@ export function RutaForm({
               onChange={(e) => setClaveElector(e.target.value)}
               maxLength={18}
               required
+              uppercase
             />
             {personaExistente && (
               <p className="text-xs text-muted-foreground">
@@ -186,7 +193,7 @@ export function RutaForm({
             <Label htmlFor="telefono">Teléfono</Label>
             <Input
               id="telefono"
-              inputMode="numeric"
+              telefonoMx
               value={telefono}
               onChange={(e) => setTelefono(e.target.value)}
               required
@@ -237,6 +244,7 @@ export function RutaForm({
                     <p className="truncate text-xs text-muted-foreground">
                       {parada.municipio} · {parada.distritoLocal} · {parada.coloniaLocalidad}
                     </p>
+                    <RcContexto rc={parada.rc} casaLabel={casaLabel} />
                   </div>
                 </div>
                 <Button
@@ -320,5 +328,28 @@ export function RutaForm({
         {isPending ? "Guardando…" : "Guardar ruta"}
       </Button>
     </div>
+  );
+}
+
+/**
+ * Contexto para el RG que captura la ruta: quién es el RC de esa casilla
+ * en la casa activa. El suplente solo llega aquí si la casilla no tiene
+ * RG (lo resuelve rutas-query). Nunca muestra clave de elector.
+ */
+function RcContexto({ rc, casaLabel }: { rc: RcResumenCasilla; casaLabel: string }) {
+  const sinNada = !rc.propietario && !rc.suplente;
+  return (
+    <p className="mt-1 text-xs text-muted-foreground">
+      <span className="font-medium text-foreground">RC ({casaLabel}): </span>
+      {sinNada ? (
+        <>Sin representante de casilla capturado</>
+      ) : (
+        <>
+          {rc.propietario ? `Propietario: ${nombreCompleto(rc.propietario)}` : "Sin propietario"}
+          {rc.suplente && ` · Suplente: ${nombreCompleto(rc.suplente)}`}
+        </>
+      )}
+      {rc.rgNombre && ` · RG: ${rc.rgNombre}`}
+    </p>
   );
 }

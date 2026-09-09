@@ -85,6 +85,7 @@ export function CasillaForm({
             defaultValue={casilla?.distritoLocal}
             placeholder="2. SALINAS"
             required
+            uppercase
           />
           <FieldError messages={fieldErrors.distritoLocal} />
         </div>
@@ -127,6 +128,7 @@ export function CasillaForm({
             defaultValue={casilla?.tipoCasilla}
             placeholder="B, C01, S01, E01…"
             required
+            uppercase
           />
           <FieldError messages={fieldErrors.tipoCasilla} />
         </div>
@@ -150,6 +152,7 @@ export function CasillaForm({
             name="coloniaLocalidad"
             defaultValue={casilla?.coloniaLocalidad}
             required
+            uppercase
           />
           <FieldError messages={fieldErrors.coloniaLocalidad} />
         </div>
@@ -161,6 +164,7 @@ export function CasillaForm({
             name="domicilio"
             defaultValue={casilla?.domicilio}
             required
+            uppercase
           />
           <FieldError messages={fieldErrors.domicilio} />
         </div>
@@ -172,6 +176,7 @@ export function CasillaForm({
             name="ubicacion"
             defaultValue={casilla?.ubicacion}
             required
+            uppercase
           />
           <FieldError messages={fieldErrors.ubicacion} />
         </div>

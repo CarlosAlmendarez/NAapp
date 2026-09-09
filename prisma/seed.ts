@@ -1,4 +1,4 @@
-import { PrismaClient, Rol, TipoRepresentante } from "@prisma/client";
+import { PrismaClient, Rol, TipoRepresentante, Casa } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { readFileSync, existsSync } from "fs";
 import path from "path";
@@ -192,6 +192,7 @@ async function seedCasillasDeEjemplo(municipios: MunicipioSeed[]) {
     data: {
       casillaId: creadas[0]!.id,
       tipo: TipoRepresentante.PROPIETARIO,
+      casa: Casa.C26,
       nombre: "Nombre",
       apellidoPaterno: "Ejemplo",
       apellidoMaterno: "Demo",

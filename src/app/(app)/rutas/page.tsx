@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { requireUser, puedeUsarModuloRutas, sinRestriccionGeografica } from "@/lib/auth-helpers";
 import { listarCasillasParaRuta, type CasillaParaRuta, type RutaCapturada } from "@/lib/rutas-query";
 import { municipiosDisponibles, distritosDisponibles } from "@/lib/casillas-query";
+import { requireCasaActiva } from "@/lib/casa-server";
+import { CASA_LABEL } from "@/lib/casa";
 import { CasillasFiltro } from "@/components/casillas/casillas-filtro";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +20,7 @@ export default async function RutasPage({
 }) {
   const usuario = await requireUser();
   if (!puedeUsarModuloRutas(usuario)) redirect("/dashboard");
+  const casa = await requireCasaActiva();
 
   const params = await searchParams;
   // El buscador por distrito local solo tiene sentido para roles sin
@@ -26,7 +29,7 @@ export default async function RutasPage({
   const esAdmin = sinRestriccionGeografica(usuario);
 
   const [{ rutas, pendientes, totalCapturadas, total }, municipios, distritos] = await Promise.all([
-    listarCasillasParaRuta(usuario, params),
+    listarCasillasParaRuta(usuario, casa, params),
     municipiosDisponibles(usuario),
     esAdmin ? distritosDisponibles(usuario) : Promise.resolve(undefined),
   ]);
@@ -37,6 +40,7 @@ export default async function RutasPage({
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Rutas</h1>
           <p className="text-sm text-muted-foreground">
+            {CASA_LABEL[casa]} ·{" "}
             {total > 0
               ? `${totalCapturadas} de ${total} casilla(s) con enlace capturado en tu alcance, en ${rutas.length} ruta(s).`
               : "No hay casillas en tu alcance."}

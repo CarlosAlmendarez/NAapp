@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { obtenerCasillaConAccesoOrThrow } from "@/actions/casillas";
 import { requireRole } from "@/lib/auth-helpers";
+import { obtenerCasaActiva } from "@/lib/casa-server";
 import { asistenteSchema } from "@/lib/validations/persona";
 import { encryptField } from "@/lib/crypto";
 import { registrarAuditoria } from "@/lib/audit";
@@ -20,11 +21,16 @@ export async function crearAsistente(
   return ejecutarAccion(async () => {
     const { usuario, casilla } = await obtenerCasillaConAccesoOrThrow(casillaId);
     requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR"]);
+
+    const casa = await obtenerCasaActiva();
+    if (!casa) throw new AccionError("Elige una casa (26 o 52) antes de capturar.");
+
     const datos = asistenteSchema.parse(formData);
 
     const asistente = await prisma.asistenteElectoral.create({
       data: {
         casillaId: casilla.id,
+        casa,
         nombre: datos.nombre,
         apellidoPaterno: datos.apellidoPaterno,
         apellidoMaterno: datos.apellidoMaterno,
@@ -57,11 +63,15 @@ export async function actualizarAsistente(
   return ejecutarAccion(async () => {
     const { usuario, casilla } = await obtenerCasillaConAccesoOrThrow(casillaId);
     requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR"]);
+
+    const casa = await obtenerCasaActiva();
+    if (!casa) throw new AccionError("Elige una casa (26 o 52) antes de capturar.");
+
     const datos = asistenteSchema.parse(formData);
 
     const anterior = await prisma.asistenteElectoral.findUnique({ where: { id: asistenteId } });
-    if (!anterior || anterior.casillaId !== casilla.id) {
-      throw new AccionError("El asistente electoral no existe en esta casilla.");
+    if (!anterior || anterior.casillaId !== casilla.id || anterior.casa !== casa) {
+      throw new AccionError("El asistente electoral no existe en esta casilla y casa.");
     }
 
     const asistente = await prisma.asistenteElectoral.update({
@@ -99,9 +109,12 @@ export async function eliminarAsistente(
     const { usuario, casilla } = await obtenerCasillaConAccesoOrThrow(casillaId);
     requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR"]);
 
+    const casa = await obtenerCasaActiva();
+    if (!casa) throw new AccionError("Elige una casa (26 o 52) antes de capturar.");
+
     const actual = await prisma.asistenteElectoral.findUnique({ where: { id: asistenteId } });
-    if (!actual || actual.casillaId !== casilla.id) {
-      throw new AccionError("El asistente electoral no existe en esta casilla.");
+    if (!actual || actual.casillaId !== casilla.id || actual.casa !== casa) {
+      throw new AccionError("El asistente electoral no existe en esta casilla y casa.");
     }
 
     await prisma.asistenteElectoral.delete({ where: { id: asistenteId } });

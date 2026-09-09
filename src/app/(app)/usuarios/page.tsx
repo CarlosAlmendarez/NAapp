@@ -14,6 +14,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { ROL_LABELS } from "@/lib/roles";
+import { CASA_LABEL } from "@/lib/casa";
 import { etiquetasLocalidades } from "@/lib/localidad";
 import { UsuarioCard } from "@/components/usuarios/usuario-card";
 
@@ -72,7 +73,10 @@ export default async function UsuariosPage() {
                   </Link>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{u.correo}</TableCell>
-                <TableCell>{ROL_LABELS[u.rol]}</TableCell>
+                <TableCell>
+                  {ROL_LABELS[u.rol]}
+                  {u.casa && ` · ${CASA_LABEL[u.casa]}`}
+                </TableCell>
                 <TableCell className="text-muted-foreground">
                   {etiquetasLocalidades(u.localidades)}
                 </TableCell>

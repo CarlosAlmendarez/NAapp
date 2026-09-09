@@ -1,5 +1,5 @@
 import "server-only";
-import { Prisma } from "@prisma/client";
+import { Prisma, type Casa } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { filtroCasillasPorRol, type UsuarioAutenticado } from "@/lib/auth-helpers";
 
@@ -38,6 +38,23 @@ export type FiltrosRuta = {
   busqueda?: string;
 };
 
+type PersonaNombre = {
+  nombre: string;
+  apellidoPaterno: string;
+  apellidoMaterno: string | null;
+};
+
+/**
+ * Contexto que se muestra a quien captura una ruta (RG): quién es el RC
+ * de esa casilla en la casa activa. El suplente solo se incluye si la
+ * casilla NO tiene RG asignado en esa casa. NUNCA lleva clave de elector.
+ */
+export type RcResumenCasilla = {
+  propietario: PersonaNombre | null;
+  suplente: PersonaNombre | null;
+  rgNombre: string | null;
+};
+
 export type CasillaBusquedaRuta = {
   id: string;
   distritoLocal: string;
@@ -47,6 +64,7 @@ export type CasillaBusquedaRuta = {
   coloniaLocalidad: string;
   ubicacion: string;
   tieneEnlace: boolean;
+  rc: RcResumenCasilla;
 };
 
 const LIMITE_BUSQUEDA_RUTA = 8;
@@ -69,6 +87,78 @@ function casillaBase(c: {
   };
 }
 
+function soloNombre(p: PersonaNombre): PersonaNombre {
+  return {
+    nombre: p.nombre,
+    apellidoPaterno: p.apellidoPaterno,
+    apellidoMaterno: p.apellidoMaterno,
+  };
+}
+
+/**
+ * Para un conjunto de casillas, arma el resumen de RC (propietario /
+ * suplente) y del RG de cada una en la casa dada. El suplente se omite
+ * cuando la casilla tiene RG (regla de captura: el suplente solo se usa
+ * si no hay RG). Se consulta en bloque para no hacer N+1 desde la UI.
+ */
+export async function obtenerResumenRcDeCasillas(
+  casillas: { id: string; distritoLocal: string }[],
+  casa: Casa
+): Promise<Map<string, RcResumenCasilla>> {
+  const resultado = new Map<string, RcResumenCasilla>();
+  if (casillas.length === 0) return resultado;
+
+  const casillaIds = casillas.map((c) => c.id);
+  const distritos = Array.from(new Set(casillas.map((c) => c.distritoLocal)));
+
+  const [representantes, rgs] = await Promise.all([
+    prisma.representanteCasilla.findMany({
+      where: { casillaId: { in: casillaIds }, casa },
+      select: {
+        casillaId: true,
+        tipo: true,
+        nombre: true,
+        apellidoPaterno: true,
+        apellidoMaterno: true,
+      },
+    }),
+    prisma.usuario.findMany({
+      where: {
+        rol: "REPRESENTANTE_GENERAL",
+        activo: true,
+        casa,
+        localidades: { some: { tipo: "DISTRITO_LOCAL", valor: { in: distritos } } },
+      },
+      select: {
+        nombre: true,
+        localidades: { where: { tipo: "DISTRITO_LOCAL" }, select: { valor: true } },
+      },
+    }),
+  ]);
+
+  const rgPorDistrito = new Map<string, string>();
+  for (const rg of rgs) {
+    for (const l of rg.localidades) {
+      if (distritos.includes(l.valor)) rgPorDistrito.set(l.valor, rg.nombre);
+    }
+  }
+
+  for (const casilla of casillas) {
+    const propios = representantes.filter((r) => r.casillaId === casilla.id);
+    const rgNombre = rgPorDistrito.get(casilla.distritoLocal) ?? null;
+    const propietario = propios.find((r) => r.tipo === "PROPIETARIO");
+    const suplente = propios.find((r) => r.tipo === "SUPLENTE");
+    resultado.set(casilla.id, {
+      propietario: propietario ? soloNombre(propietario) : null,
+      // El suplente solo se muestra si la casilla no tiene RG en esta casa.
+      suplente: !rgNombre && suplente ? soloNombre(suplente) : null,
+      rgNombre,
+    });
+  }
+
+  return resultado;
+}
+
 /**
  * Casillas del módulo de Rutas dentro del alcance del usuario (mismo
  * filtro geográfico que /casillas — para RG, su(s) distrito(s) local(es)
@@ -78,10 +168,11 @@ function casillaBase(c: {
  * ascendente (el orden real en que se recorrió cada ruta, que no se mueve
  * al editar); dentro de cada ruta, las casillas van en `ordenEnRuta`. Las
  * "pendientes" van aparte, ordenadas por sección, igual que el listado
- * general de casillas.
+ * general de casillas. Todo se acota a la casa activa (26 / 52).
  */
 export async function listarCasillasParaRuta(
   usuario: UsuarioAutenticado,
+  casa: Casa,
   filtros: FiltrosRuta
 ): Promise<{
   rutas: RutaCapturada[];
@@ -112,12 +203,14 @@ export async function listarCasillasParaRuta(
   const casillas = await prisma.casilla.findMany({
     where: { AND: and },
     orderBy: [{ municipio: "asc" }, { seccion: "asc" }, { tipoCasilla: "asc" }],
-    include: { enlace: true },
+    include: { enlaces: { where: { casa } } },
   });
 
-  const pendientes = casillas.filter((c) => c.enlace === null).map(casillaBase);
+  const conEnlace = casillas.map((c) => ({ ...c, enlace: c.enlaces[0] ?? null }));
 
-  const capturadas = casillas.filter(
+  const pendientes = conEnlace.filter((c) => c.enlace === null).map(casillaBase);
+
+  const capturadas = conEnlace.filter(
     (c): c is typeof c & { enlace: NonNullable<typeof c.enlace> } => c.enlace !== null
   );
 
@@ -159,10 +252,12 @@ export async function listarCasillasParaRuta(
  * tienen enlace capturado: se puede volver a agregar una casilla ya
  * capturada a una ruta nueva para sobrescribir su enlace (ej. el mismo
  * operador cubre varias casillas contiguas), por eso se marca con
- * `tieneEnlace` en vez de ocultarla.
+ * `tieneEnlace` en vez de ocultarla. Cada resultado incluye el resumen de
+ * RC/RG de esa casilla en la casa activa (contexto para el RG).
  */
 export async function buscarCasillasParaRuta(
   usuario: UsuarioAutenticado,
+  casa: Casa,
   texto: string
 ): Promise<CasillaBusquedaRuta[]> {
   const termino = texto.trim();
@@ -184,8 +279,13 @@ export async function buscarCasillasParaRuta(
     where: { AND: and },
     orderBy: [{ municipio: "asc" }, { seccion: "asc" }, { tipoCasilla: "asc" }],
     take: LIMITE_BUSQUEDA_RUTA,
-    include: { enlace: { select: { id: true } } },
+    include: { enlaces: { where: { casa }, select: { id: true } } },
   });
+
+  const resumenRc = await obtenerResumenRcDeCasillas(
+    casillas.map((c) => ({ id: c.id, distritoLocal: c.distritoLocal })),
+    casa
+  );
 
   return casillas.map((c) => ({
     id: c.id,
@@ -195,6 +295,7 @@ export async function buscarCasillasParaRuta(
     tipoCasilla: c.tipoCasilla,
     coloniaLocalidad: c.coloniaLocalidad,
     ubicacion: c.ubicacion,
-    tieneEnlace: c.enlace !== null,
+    tieneEnlace: c.enlaces.length > 0,
+    rc: resumenRc.get(c.id) ?? { propietario: null, suplente: null, rgNombre: null },
   }));
 }

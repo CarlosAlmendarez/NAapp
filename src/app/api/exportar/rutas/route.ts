@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { obtenerUsuarioValidoOrNull } from "@/lib/auth-helpers";
+import { obtenerCasaActiva } from "@/lib/casa-server";
+import { CASA_NUMERO } from "@/lib/casa";
 import { construirLibroRutas } from "@/lib/exportar-xlsx";
 import { registrarAuditoria } from "@/lib/audit";
 
@@ -19,20 +21,25 @@ export async function GET(request: NextRequest) {
     return new NextResponse("No tienes permiso para exportar este archivo.", { status: 403 });
   }
 
-  const buffer = await construirLibroRutas();
+  const casa = await obtenerCasaActiva();
+  if (!casa) {
+    return new NextResponse("Elige una casa (26 o 52) antes de exportar.", { status: 400 });
+  }
+
+  const buffer = await construirLibroRutas(casa);
 
   await registrarAuditoria({
     usuarioId: usuario.id,
     accion: "EXPORTAR",
     entidad: "EnlaceCasilla",
-    datosDespues: { formato: "xlsx" },
+    datosDespues: { formato: "xlsx", casa },
   });
 
   const fecha = new Date().toISOString().slice(0, 10);
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="rutas-nueva-alianza-slp-${fecha}.xlsx"`,
+      "Content-Disposition": `attachment; filename="rutas-nueva-alianza-slp-casa-${CASA_NUMERO[casa]}-${fecha}.xlsx"`,
     },
   });
 }

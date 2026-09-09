@@ -2,12 +2,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { requireUser, puedeUsarModuloRutas } from "@/lib/auth-helpers";
+import { requireCasaActiva } from "@/lib/casa-server";
+import { CASA_LABEL } from "@/lib/casa";
 import { RutaForm } from "@/components/casillas/ruta-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function NuevaRutaPage() {
   const usuario = await requireUser();
   if (!puedeUsarModuloRutas(usuario)) redirect("/dashboard");
+  const casa = await requireCasaActiva();
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -21,10 +24,10 @@ export default async function NuevaRutaPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Nueva ruta</CardTitle>
+          <CardTitle>Nueva ruta — {CASA_LABEL[casa]}</CardTitle>
         </CardHeader>
         <CardContent>
-          <RutaForm />
+          <RutaForm casaLabel={CASA_LABEL[casa]} />
         </CardContent>
       </Card>
     </div>

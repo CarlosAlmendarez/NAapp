@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth-helpers";
+import { requireCasaActiva } from "@/lib/casa-server";
+import { CASA_LABEL } from "@/lib/casa";
 import { obtenerEstadisticas, obtenerEstadisticasRuta } from "@/lib/stats";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { RutaStatsCards } from "@/components/dashboard/ruta-stats-cards";
@@ -10,20 +12,21 @@ import { etiquetasLocalidades } from "@/lib/localidad";
 
 export default async function DashboardPage() {
   const usuario = await requireUser();
+  const casa = await requireCasaActiva();
   // El RG nunca captura ni ve RC propietario/suplente — su avance se mide
   // por enlaces capturados en el módulo de Rutas, no por obtenerEstadisticas
   // (que cuenta RC). Los demás roles siguen viendo el avance de RC de
-  // siempre.
+  // siempre. Todo acotado a la casa activa.
   const esRG = usuario.rol === "REPRESENTANTE_GENERAL";
-  const stats = esRG ? null : await obtenerEstadisticas(usuario);
-  const statsRuta = esRG ? await obtenerEstadisticasRuta(usuario) : null;
+  const stats = esRG ? null : await obtenerEstadisticas(usuario, casa);
+  const statsRuta = esRG ? await obtenerEstadisticasRuta(usuario, casa) : null;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-foreground">Hola, {usuario.nombre}</h1>
         <p className="text-sm text-muted-foreground">
-          {ROL_LABELS[usuario.rol]}
+          {ROL_LABELS[usuario.rol]} · {CASA_LABEL[casa]}
           {(usuario.rol === "CAPTURADOR" || usuario.rol === "REPRESENTANTE_GENERAL") &&
             usuario.localidades.length > 0 && (
               <> · Localidades asignadas: {etiquetasLocalidades(usuario.localidades)}</>

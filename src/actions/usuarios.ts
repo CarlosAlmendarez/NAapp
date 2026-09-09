@@ -10,20 +10,25 @@ import {
   resetearPasswordSchema,
 } from "@/lib/validations/usuario";
 import { registrarAuditoria } from "@/lib/audit";
+import { CASA_LABEL } from "@/lib/casa";
 import { ejecutarAccion, AccionError, type ActionResult } from "@/lib/action-result";
+import type { Casa } from "@prisma/client";
 
 const BCRYPT_ROUNDS = 12;
 
 const ROLES_CON_LOCALIDADES: readonly string[] = ["CAPTURADOR", "REPRESENTANTE_GENERAL"];
 
 /**
- * Un distrito local solo debe tener 1 Representante General activo a la
- * vez (evita capturas duplicadas/confusas del mismo distrito en el
- * módulo de Rutas). `excluirUsuarioId` se usa al editar, para no chocar
- * contra el propio registro que se está guardando.
+ * Un distrito local solo debe tener 1 Representante General activo POR
+ * casa (26 / 52) — así puede haber un RG para (distrito, Casa 26) y otro
+ * distinto para (distrito, Casa 52), pero no dos en la misma casa (evita
+ * capturas duplicadas/confusas del mismo distrito en el módulo de Rutas).
+ * `excluirUsuarioId` se usa al editar, para no chocar contra el propio
+ * registro que se está guardando.
  */
 async function verificarDistritoLibreParaRG(
   localidades: { tipo: "MUNICIPIO" | "DISTRITO_LOCAL"; valor: string }[],
+  casa: Casa,
   excluirUsuarioId?: string
 ): Promise<void> {
   const distritos = localidades.filter((l) => l.tipo === "DISTRITO_LOCAL").map((l) => l.valor);
@@ -36,6 +41,7 @@ async function verificarDistritoLibreParaRG(
       usuario: {
         rol: "REPRESENTANTE_GENERAL",
         activo: true,
+        casa,
         ...(excluirUsuarioId ? { NOT: { id: excluirUsuarioId } } : {}),
       },
     },
@@ -44,7 +50,7 @@ async function verificarDistritoLibreParaRG(
 
   if (conflicto) {
     throw new AccionError(
-      `El distrito local "${conflicto.valor}" ya tiene asignado a otro Representante General activo (${conflicto.usuario.nombre}).`
+      `El distrito local "${conflicto.valor}" ya tiene asignado a otro Representante General activo en ${CASA_LABEL[casa]} (${conflicto.usuario.nombre}).`
     );
   }
 }
@@ -60,8 +66,9 @@ export async function crearUsuario(formData: unknown): Promise<ActionResult<{ id
     const existente = await prisma.usuario.findUnique({ where: { correo: datos.correo } });
     if (existente) throw new AccionError("Ya existe un usuario con ese correo.");
 
-    if (datos.rol === "REPRESENTANTE_GENERAL") {
-      await verificarDistritoLibreParaRG(datos.localidades);
+    const casa = datos.rol === "REPRESENTANTE_GENERAL" ? (datos.casa ?? null) : null;
+    if (datos.rol === "REPRESENTANTE_GENERAL" && casa) {
+      await verificarDistritoLibreParaRG(datos.localidades, casa);
     }
 
     const passwordHash = await bcrypt.hash(datos.password, BCRYPT_ROUNDS);
@@ -72,6 +79,7 @@ export async function crearUsuario(formData: unknown): Promise<ActionResult<{ id
         correo: datos.correo,
         passwordHash,
         rol: datos.rol,
+        casa,
         creadoPorId: admin.id,
         localidades: ROLES_CON_LOCALIDADES.includes(datos.rol)
           ? { create: datos.localidades.map((l) => ({ tipo: l.tipo, valor: l.valor })) }
@@ -107,11 +115,13 @@ export async function actualizarUsuario(formData: unknown): Promise<ActionResult
     });
     if (correoEnUso) throw new AccionError("Ese correo ya está en uso por otro usuario.");
 
+    const casa = datos.rol === "REPRESENTANTE_GENERAL" ? (datos.casa ?? null) : null;
+
     // Solo importa si el usuario quedará como RG activo tras este guardado
     // — uno ya desactivado, o que deja de ser RG, no debe bloquear el
-    // distrito para nadie más.
-    if (datos.rol === "REPRESENTANTE_GENERAL" && datos.activo) {
-      await verificarDistritoLibreParaRG(datos.localidades, datos.id);
+    // distrito para nadie más. La unicidad es por (distrito, casa).
+    if (datos.rol === "REPRESENTANTE_GENERAL" && datos.activo && casa) {
+      await verificarDistritoLibreParaRG(datos.localidades, casa, datos.id);
     }
 
     const seDesactivo = anterior.activo && !datos.activo;
@@ -124,6 +134,7 @@ export async function actualizarUsuario(formData: unknown): Promise<ActionResult
           correo: datos.correo,
           rol: datos.rol,
           activo: datos.activo,
+          casa,
           // Si se desactiva, se revocan sus sesiones activas de inmediato.
           ...(seDesactivo ? { sessionVersion: { increment: 1 } } : {}),
         },

@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MapPin } from "lucide-react";
+import { MapPin, UserCheck } from "lucide-react";
 import { requireUser, tieneAccesoALocalidad } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { requireCasaActiva } from "@/lib/casa-server";
+import { CASA_LABEL } from "@/lib/casa";
+import { obtenerRgDeCasilla } from "@/lib/rg-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,13 +18,14 @@ export default async function CasillaDetallePage({
   params: Promise<{ id: string }>;
 }) {
   const usuario = await requireUser();
+  const casa = await requireCasaActiva();
   const { id } = await params;
 
   const casilla = await prisma.casilla.findUnique({
     where: { id },
     include: {
-      representantes: { orderBy: { tipo: "asc" } },
-      enlace: true,
+      representantes: { where: { casa }, orderBy: { tipo: "asc" } },
+      enlaces: { where: { casa } },
     },
   });
 
@@ -33,6 +37,11 @@ export default async function CasillaDetallePage({
     notFound();
   }
 
+  const enlace = casilla.enlaces[0] ?? null;
+  // Cambio 2: a quien captura RC se le muestra quién es el RG de esta
+  // casilla en esta casa. El RC suplente solo se ofrece si NO hay RG.
+  const rg = await obtenerRgDeCasilla(casilla.distritoLocal, casa);
+
   // El Representante General no captura RC, y tampoco ve aquí la sección
   // de Enlace: siempre debe capturar/editar enlaces desde el módulo de
   // Rutas (/rutas), nunca desde el atajo del detalle de una casilla — así
@@ -42,6 +51,9 @@ export default async function CasillaDetallePage({
   const puedeVerEnlace = usuario.rol === "ADMIN_GENERAL";
   const propietario = casilla.representantes.find((r) => r.tipo === "PROPIETARIO");
   const suplente = casilla.representantes.find((r) => r.tipo === "SUPLENTE");
+  // El suplente solo se muestra/captura si la casilla no tiene RG en esta
+  // casa (aunque si ya hubiera un suplente capturado, se sigue mostrando).
+  const mostrarSuplente = !rg || Boolean(suplente);
 
   return (
     <div className="space-y-6">
@@ -50,7 +62,7 @@ export default async function CasillaDetallePage({
           <div className="min-w-0">
             <CardTitle>Distrito local {casilla.distritoLocal}</CardTitle>
             <p className="mt-1 text-sm font-normal text-muted-foreground">
-              Sección {casilla.seccion}
+              Sección {casilla.seccion} · datos de {CASA_LABEL[casa]}
             </p>
             <div className="mt-1 flex flex-wrap items-center gap-1.5 whitespace-nowrap text-sm font-normal text-muted-foreground">
               Tipo de Casilla:
@@ -84,26 +96,62 @@ export default async function CasillaDetallePage({
 
       {puedeVerRc && (
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-foreground">Representantes de Casilla</h2>
+          <h2 className="text-lg font-semibold text-foreground">
+            Representantes de Casilla — {CASA_LABEL[casa]}
+          </h2>
+
+          <Card>
+            <CardContent className="flex items-start gap-3 p-4">
+              <UserCheck className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 text-sm">
+                <p className="font-medium text-foreground">
+                  Representante General (RG) de esta casilla en {CASA_LABEL[casa]}
+                </p>
+                {rg ? (
+                  <p className="text-muted-foreground">
+                    {rg.nombre} · {rg.correo}
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">
+                    Sin RG asignado en {CASA_LABEL[casa]}. Puedes capturar RC igualmente.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           <RepresentanteResumen
             casillaId={casilla.id}
             tipo="PROPIETARIO"
             etiqueta="RC Propietario"
+            casaLabel={CASA_LABEL[casa]}
             representante={propietario}
           />
-          <RepresentanteResumen
-            casillaId={casilla.id}
-            tipo="SUPLENTE"
-            etiqueta="RC Suplente"
-            representante={suplente}
-          />
+          {mostrarSuplente ? (
+            <RepresentanteResumen
+              casillaId={casilla.id}
+              tipo="SUPLENTE"
+              etiqueta="RC Suplente"
+              casaLabel={CASA_LABEL[casa]}
+              representante={suplente}
+            />
+          ) : (
+            <Card>
+              <CardContent className="p-4 text-sm text-muted-foreground">
+                El RC suplente no se captura en {CASA_LABEL[casa]}: esta casilla ya tiene
+                Representante General.
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
       {puedeVerEnlace && (
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-foreground">Enlace de casilla (Ruta)</h2>
-          <EnlaceResumen casillaId={casilla.id} enlace={casilla.enlace} />
+          <h2 className="text-lg font-semibold text-foreground">
+            Enlace de casilla (Ruta) — {CASA_LABEL[casa]}
+          </h2>
+          <EnlaceResumen casillaId={casilla.id} enlace={enlace} />
         </div>
       )}
     </div>
@@ -158,11 +206,13 @@ function RepresentanteResumen({
   casillaId,
   tipo,
   etiqueta,
+  casaLabel,
   representante,
 }: {
   casillaId: string;
   tipo: "PROPIETARIO" | "SUPLENTE";
   etiqueta: string;
+  casaLabel: string;
   representante?: {
     nombre: string;
     apellidoPaterno: string;
@@ -187,7 +237,7 @@ function RepresentanteResumen({
             <>
               <p className="truncate text-sm text-foreground">{nombreCompleto(representante)}</p>
               <p className="truncate text-xs text-muted-foreground">
-                Propone: {representante.propone}
+                Propone: {representante.propone} ({casaLabel})
               </p>
               <p className="text-xs text-muted-foreground">
                 Capturado el {formatFecha(representante.capturadoEn)}

@@ -1,5 +1,5 @@
 import "server-only";
-import { Prisma } from "@prisma/client";
+import { Prisma, type Casa } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   filtroCasillasPorRol,
@@ -16,7 +16,11 @@ export type FiltrosCasillas = {
   page?: number;
 };
 
-export async function listarCasillas(usuario: UsuarioAutenticado, filtros: FiltrosCasillas) {
+export async function listarCasillas(
+  usuario: UsuarioAutenticado,
+  casa: Casa,
+  filtros: FiltrosCasillas
+) {
   const page = Math.max(1, filtros.page ?? 1);
 
   // Se combinan como cláusulas AND independientes (no reasignar `where.OR`
@@ -55,7 +59,8 @@ export async function listarCasillas(usuario: UsuarioAutenticado, filtros: Filtr
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       include: {
-        representantes: { select: { tipo: true } },
+        // Los badges "capturado" reflejan solo la casa activa.
+        representantes: { select: { tipo: true }, where: { casa } },
       },
     }),
   ]);

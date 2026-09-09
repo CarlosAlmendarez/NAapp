@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { LogOut, ShieldAlert, KeyRound, ChevronDown } from "lucide-react";
+import type { Casa } from "@prisma/client";
 import { LogoConTexto } from "@/components/layout/logo";
+import { CasaSwitcher } from "@/components/layout/casa-switcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,17 +17,26 @@ import { ROL_LABELS } from "@/lib/roles";
 import { cerrarSesion, cerrarTodasMisSesiones } from "@/actions/auth";
 import type { UsuarioAutenticado } from "@/lib/auth-helpers";
 
-export function Header({ usuario }: { usuario: UsuarioAutenticado }) {
+export function Header({
+  usuario,
+  casaActiva,
+}: {
+  usuario: UsuarioAutenticado;
+  casaActiva: Casa;
+}) {
   return (
     <header className="border-b border-border bg-card">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/dashboard">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+        <Link href="/dashboard" className="shrink-0">
           <LogoConTexto />
         </Link>
 
-        <DropdownMenu>
+        <div className="flex items-center gap-2">
+          <CasaSwitcher casaActiva={casaActiva} />
+
+          <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="max-w-[60vw]">
+            <Button variant="outline" size="sm" className="max-w-[38vw]">
               <span className="truncate">{usuario.nombre}</span>
               <ChevronDown className="h-4 w-4 shrink-0" />
             </Button>
@@ -54,7 +65,8 @@ export function Header({ usuario }: { usuario: UsuarioAutenticado }) {
               Cerrar sesión
             </DropdownAccionItem>
           </DropdownMenuContent>
-        </DropdownMenu>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
   );

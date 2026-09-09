@@ -21,10 +21,12 @@ type RepresentanteExistente = {
 export function RepresentanteForm({
   casillaId,
   tipo,
+  casaLabel,
   existente,
 }: {
   casillaId: string;
   tipo: "PROPIETARIO" | "SUPLENTE";
+  casaLabel: string;
   existente?: RepresentanteExistente;
 }) {
   const router = useRouter();
@@ -66,7 +68,7 @@ export function RepresentanteForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="nombre">Nombre(s)</Label>
-          <Input id="nombre" name="nombre" defaultValue={existente?.nombre} required />
+          <Input id="nombre" name="nombre" defaultValue={existente?.nombre} required uppercase />
           <FieldError messages={fieldErrors.nombre} />
         </div>
         <div className="space-y-1.5">
@@ -76,6 +78,7 @@ export function RepresentanteForm({
             name="apellidoPaterno"
             defaultValue={existente?.apellidoPaterno}
             required
+            uppercase
           />
           <FieldError messages={fieldErrors.apellidoPaterno} />
         </div>
@@ -85,12 +88,13 @@ export function RepresentanteForm({
             id="apellidoMaterno"
             name="apellidoMaterno"
             defaultValue={existente?.apellidoMaterno ?? ""}
+            uppercase
           />
           <FieldError messages={fieldErrors.apellidoMaterno} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="claveElector">Clave de elector</Label>
-          <Input id="claveElector" name="claveElector" maxLength={18} required />
+          <Input id="claveElector" name="claveElector" maxLength={18} required uppercase />
           {existente && (
             <p className="text-xs text-muted-foreground">
               Por seguridad, vuelve a capturarla para confirmarla.
@@ -113,14 +117,16 @@ export function RepresentanteForm({
           <Input
             id="telefono"
             name="telefono"
-            inputMode="numeric"
+            telefonoMx
             defaultValue={existente?.telefono ?? ""}
           />
           <FieldError messages={fieldErrors.telefono} />
         </div>
         <div className="space-y-1.5 sm:col-span-2">
-          <Label htmlFor="propone">Propone (partido/coalición)</Label>
-          <Input id="propone" name="propone" defaultValue={existente?.propone} required />
+          <Label htmlFor="propone">
+            ¿Quién propone / recomienda? (partido/coalición) ({casaLabel})
+          </Label>
+          <Input id="propone" name="propone" defaultValue={existente?.propone} required uppercase />
           <FieldError messages={fieldErrors.propone} />
         </div>
       </div>

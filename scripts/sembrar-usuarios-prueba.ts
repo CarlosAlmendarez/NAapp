@@ -49,10 +49,14 @@ async function crearSiNoExiste(datos: {
   correo: string;
   password: string;
   rol: Rol;
+  casa?: "C26" | "C52";
   localidad?: { tipo: "DISTRITO_LOCAL"; valor: string };
 }) {
   const existente = await prisma.usuario.findUnique({ where: { correo: datos.correo } });
   if (existente) {
+    if (datos.casa && existente.casa !== datos.casa) {
+      await prisma.usuario.update({ where: { id: existente.id }, data: { casa: datos.casa } });
+    }
     // Ya existe de una corrida anterior — se asegura igual de que tenga la
     // localidad esperada (ej. al agregar la restricción geográfica del RG
     // después de que el usuario de prueba ya existía).
@@ -81,6 +85,7 @@ async function crearSiNoExiste(datos: {
       passwordHash,
       rol: datos.rol,
       activo: true,
+      casa: datos.casa ?? null,
       localidades: datos.localidad ? { create: [datos.localidad] } : undefined,
     },
   });
@@ -93,6 +98,9 @@ async function main() {
     correo: RG.correo,
     password: RG.password,
     rol: Rol.REPRESENTANTE_GENERAL,
+    // Un RG debe tener casa (26 / 52): la unicidad "un RG por distrito" es
+    // por casa. Las pruebas usan la Casa 26 por defecto.
+    casa: "C26",
     // Restringido a este distrito desde que el RG dejó de tener acceso
     // ilimitado (ver módulo de Rutas) — mismo distrito que ya usaban las
     // pruebas de tests/casillas.spec.ts para crear casillas de RG.

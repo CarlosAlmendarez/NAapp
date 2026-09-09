@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth-helpers";
+import { requireCasaActiva } from "@/lib/casa-server";
+import { CASA_LABEL } from "@/lib/casa";
 import { obtenerEstadisticas, obtenerEstadisticasPorMunicipio } from "@/lib/stats";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import {
@@ -17,17 +19,20 @@ export default async function EstadisticasPage() {
   if (usuario.rol !== "ADMIN_GENERAL") {
     redirect("/dashboard");
   }
+  const casa = await requireCasaActiva();
 
   const [stats, porMunicipio] = await Promise.all([
-    obtenerEstadisticas(usuario),
-    obtenerEstadisticasPorMunicipio(),
+    obtenerEstadisticas(usuario, casa),
+    obtenerEstadisticasPorMunicipio(casa),
   ]);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-foreground">Estadísticas globales</h1>
-        <p className="text-sm text-muted-foreground">Avance de captura en todo el estado.</p>
+        <p className="text-sm text-muted-foreground">
+          Avance de captura en todo el estado · {CASA_LABEL[casa]}.
+        </p>
       </div>
 
       <StatsCards stats={stats} />

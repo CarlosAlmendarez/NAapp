@@ -1,6 +1,8 @@
 import "server-only";
 import * as XLSX from "xlsx";
+import type { Casa } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { CASA_NUMERO } from "@/lib/casa";
 
 /**
  * Recrea el formato exacto del padrón oficial ("SECCIONES Y CASILLAS
@@ -20,7 +22,11 @@ import { prisma } from "@/lib/prisma";
  */
 const NOMBRE_HOJA = "sabana.";
 
-const ENCABEZADO_COLUMNAS = [
+// Los datos de RC/enlace son por casa (26 / 52): cada exportación trae los
+// de UNA casa (la activa) y agrega "CASA" como última columna para dejarlo
+// explícito. El orden del resto de columnas se conserva igual que el
+// padrón oficial (por eso "CASA" va al final y no al frente).
+const ENCABEZADO_COLUMNAS_BASE = [
   "DISTRITO FEDERAL",
   "DISTRITO LOCAL",
   "MUNICIPIO",
@@ -46,6 +52,8 @@ const ENCABEZADO_COLUMNAS = [
   "Teléfono",
   "Propone",
 ] as const;
+
+const ENCABEZADO_COLUMNAS = [...ENCABEZADO_COLUMNAS_BASE, "CASA"] as const;
 
 type RepresentanteParaExportar = {
   nombre: string;
@@ -116,19 +124,25 @@ function construirLibro(
  * padrón oficial, con el RC propietario/suplente ya capturado en la app
  * (si existe) rellenando esas columnas.
  */
-export async function construirLibroCasillas(): Promise<Buffer> {
+export async function construirLibroCasillas(casa: Casa): Promise<Buffer> {
   const casillas = await prisma.casilla.findMany({
     orderBy: [{ municipio: "asc" }, { seccion: "asc" }, { tipoCasilla: "asc" }],
-    include: { representantes: true },
+    include: { representantes: { where: { casa } } },
   });
 
+  const numeroCasa = CASA_NUMERO[casa];
   const filas = casillas.map((c) => {
     const propietario = c.representantes.find((r) => r.tipo === "PROPIETARIO") ?? null;
     const suplente = c.representantes.find((r) => r.tipo === "SUPLENTE") ?? null;
-    return [...filaCasillaBase(c), ...filaRepresentante(propietario), ...filaRepresentante(suplente)];
+    return [
+      ...filaCasillaBase(c),
+      ...filaRepresentante(propietario),
+      ...filaRepresentante(suplente),
+      numeroCasa,
+    ];
   });
 
-  const superEncabezado = new Array(24).fill("");
+  const superEncabezado = new Array(ENCABEZADO_COLUMNAS.length).fill("");
   superEncabezado[10] = "PROPIETARIO";
   superEncabezado[17] = "SUPLENTE";
 
@@ -139,7 +153,7 @@ export async function construirLibroCasillas(): Promise<Buffer> {
 }
 
 const ENCABEZADO_COLUMNAS_RUTA = [
-  ...ENCABEZADO_COLUMNAS,
+  ...ENCABEZADO_COLUMNAS_BASE,
   "RUTA #",
   "ORDEN EN RUTA",
   "Nombre",
@@ -148,6 +162,7 @@ const ENCABEZADO_COLUMNAS_RUTA = [
   "Correo Electrónico",
   "Teléfono",
   "Capturado el",
+  "CASA",
 ] as const;
 
 /**
@@ -159,11 +174,13 @@ const ENCABEZADO_COLUMNAS_RUTA = [
  * vistazo. Las casillas sin enlace capturado quedan al final, con esas
  * columnas en blanco, en el orden normal del catálogo.
  */
-export async function construirLibroRutas(): Promise<Buffer> {
-  const casillas = await prisma.casilla.findMany({
+export async function construirLibroRutas(casa: Casa): Promise<Buffer> {
+  const casillasRaw = await prisma.casilla.findMany({
     orderBy: [{ municipio: "asc" }, { seccion: "asc" }, { tipoCasilla: "asc" }],
-    include: { representantes: true, enlace: true },
+    include: { representantes: { where: { casa } }, enlaces: { where: { casa } } },
   });
+  const numeroCasa = CASA_NUMERO[casa];
+  const casillas = casillasRaw.map((c) => ({ ...c, enlace: c.enlaces[0] ?? null }));
 
   const capturadas = casillas.filter((c) => c.enlace !== null);
   const pendientes = casillas.filter((c) => c.enlace === null);
@@ -212,6 +229,7 @@ export async function construirLibroRutas(): Promise<Buffer> {
       enlace.correoElectronico ?? "",
       enlace.telefono,
       formateador.format(enlace.capturadoEn),
+      numeroCasa,
     ];
   });
 
@@ -222,18 +240,19 @@ export async function construirLibroRutas(): Promise<Buffer> {
       ...filaCasillaBase(c),
       ...filaRepresentante(propietario),
       ...filaRepresentante(suplente),
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
+      "", // RUTA #
+      "", // ORDEN EN RUTA
+      "", // Nombre
+      "", // Apellido Paterno
+      "", // Apellido Materno
+      "", // Correo Electrónico
+      "", // Teléfono
+      "", // Capturado el
+      numeroCasa,
     ];
   });
 
-  const superEncabezado = new Array(32).fill("");
+  const superEncabezado = new Array(ENCABEZADO_COLUMNAS_RUTA.length).fill("");
   superEncabezado[10] = "PROPIETARIO";
   superEncabezado[17] = "SUPLENTE";
   superEncabezado[24] = "RUTA (MÓDULO RUTAS)";

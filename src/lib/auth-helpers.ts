@@ -1,6 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import type { Prisma, Rol } from "@prisma/client";
+import type { Casa, Prisma, Rol } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -12,6 +12,8 @@ export type UsuarioAutenticado = {
   correo: string;
   rol: Rol;
   activo: boolean;
+  /** De qué casa es RG. Solo se llena cuando rol === "REPRESENTANTE_GENERAL". */
+  casa: Casa | null;
   /** Municipios y/o distritos locales asignados. Solo relevante cuando rol === "CAPTURADOR". */
   localidades: LocalidadAsignada[];
 };
@@ -105,6 +107,7 @@ export async function obtenerUsuarioValidoOrNull(): Promise<UsuarioAutenticado |
     correo: usuario.correo,
     rol: usuario.rol,
     activo: usuario.activo,
+    casa: usuario.casa,
     localidades: usuario.localidades.map((l) => ({ tipo: l.tipo, valor: l.valor })),
   };
 }

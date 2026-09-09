@@ -8,6 +8,7 @@ import {
   requireRole,
   requireLocalidadAccess,
 } from "@/lib/auth-helpers";
+import { obtenerCasaActiva } from "@/lib/casa-server";
 import { enlaceCasillaSchema } from "@/lib/validations/persona";
 import {
   buscarCasillasParaRuta,
@@ -29,7 +30,9 @@ export async function buscarCasillasRuta(
   return ejecutarAccion(async () => {
     const usuario = await requireUserOrThrow();
     requireRole(usuario, [...ROLES_MODULO_RUTAS]);
-    return buscarCasillasParaRuta(usuario, texto);
+    const casa = await obtenerCasaActiva();
+    if (!casa) throw new AccionError("Elige una casa (26 o 52) antes de capturar.");
+    return buscarCasillasParaRuta(usuario, casa, texto);
   });
 }
 
@@ -57,6 +60,9 @@ export async function guardarRutaEnlaces(
     const usuario = await requireUserOrThrow();
     requireRole(usuario, [...ROLES_MODULO_RUTAS]);
 
+    const casa = await obtenerCasaActiva();
+    if (!casa) throw new AccionError("Elige una casa (26 o 52) antes de capturar.");
+
     const idsUnicos = Array.from(new Set(casillaIds));
     if (idsUnicos.length === 0) {
       throw new AccionError("Agrega al menos una casilla a la ruta.");
@@ -66,7 +72,7 @@ export async function guardarRutaEnlaces(
 
     const casillas = await prisma.casilla.findMany({
       where: { id: { in: idsUnicos } },
-      include: { enlace: true },
+      include: { enlaces: { where: { casa } } },
     });
     if (casillas.length !== idsUnicos.length) {
       throw new AccionError("Alguna de las casillas seleccionadas ya no existe.");
@@ -86,9 +92,10 @@ export async function guardarRutaEnlaces(
     await prisma.$transaction(
       casillas.map((casilla) =>
         prisma.enlaceCasilla.upsert({
-          where: { casillaId: casilla.id },
+          where: { casillaId_casa: { casillaId: casilla.id, casa } },
           create: {
             casillaId: casilla.id,
+            casa,
             nombre: datos.nombre,
             apellidoPaterno: datos.apellidoPaterno,
             apellidoMaterno: datos.apellidoMaterno,
@@ -120,16 +127,18 @@ export async function guardarRutaEnlaces(
     );
 
     for (const casilla of casillas) {
+      const enlacePrevio = casilla.enlaces[0] ?? null;
       await registrarAuditoria({
         usuarioId: usuario.id,
-        accion: casilla.enlace ? "ACTUALIZAR" : "CREAR",
+        accion: enlacePrevio ? "ACTUALIZAR" : "CREAR",
         entidad: "EnlaceCasilla",
         entidadId: casilla.id,
-        datosAntes: casilla.enlace
-          ? { ...casilla.enlace, claveElectorCifrada: "[cifrado]" }
+        datosAntes: enlacePrevio
+          ? { ...enlacePrevio, claveElectorCifrada: "[cifrado]" }
           : undefined,
         datosDespues: {
           casillaId: casilla.id,
+          casa,
           nombre: datos.nombre,
           apellidoPaterno: datos.apellidoPaterno,
           claveElectorCifrada: "[cifrado]",

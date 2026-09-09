@@ -1,4 +1,5 @@
 import "server-only";
+import type { Casa } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { UsuarioAutenticado } from "@/lib/auth-helpers";
 import { filtroCasillasPorRol } from "@/lib/auth-helpers";
@@ -12,29 +13,36 @@ export type Estadisticas = {
   porcentajeAvance: number;
 };
 
-/** Estadísticas de avance de captura, respetando el alcance del usuario. */
-export async function obtenerEstadisticas(usuario: UsuarioAutenticado): Promise<Estadisticas> {
+/**
+ * Estadísticas de avance de captura, respetando el alcance del usuario y
+ * acotadas a la casa activa (26 / 52): los RC, suplentes y asistentes se
+ * cuentan solo dentro de esa casa; el catálogo de casillas es común.
+ */
+export async function obtenerEstadisticas(
+  usuario: UsuarioAutenticado,
+  casa: Casa
+): Promise<Estadisticas> {
   const filtro = filtroCasillasPorRol(usuario);
 
   const [totalCasillas, conPropietario, conSuplente, completas, totalAsistentes] =
     await Promise.all([
       prisma.casilla.count({ where: filtro }),
       prisma.representanteCasilla.count({
-        where: { tipo: "PROPIETARIO", casilla: filtro },
+        where: { tipo: "PROPIETARIO", casa, casilla: filtro },
       }),
       prisma.representanteCasilla.count({
-        where: { tipo: "SUPLENTE", casilla: filtro },
+        where: { tipo: "SUPLENTE", casa, casilla: filtro },
       }),
       prisma.casilla.count({
         where: {
           ...filtro,
           AND: [
-            { representantes: { some: { tipo: "PROPIETARIO" } } },
-            { representantes: { some: { tipo: "SUPLENTE" } } },
+            { representantes: { some: { tipo: "PROPIETARIO", casa } } },
+            { representantes: { some: { tipo: "SUPLENTE", casa } } },
           ],
         },
       }),
-      prisma.asistenteElectoral.count({ where: { casilla: filtro } }),
+      prisma.asistenteElectoral.count({ where: { casa, casilla: filtro } }),
     ]);
 
   return {
@@ -55,18 +63,21 @@ export type EstadisticasRuta = {
 
 /**
  * Estadísticas del módulo de Rutas (enlace por casilla), respetando el
- * alcance del usuario — a diferencia de `obtenerEstadisticas`, que cuenta
- * RC propietario/suplente. El Representante General nunca captura RC (ni
- * siquiera lo ve), así que su dashboard debe usar esta función y no la de
- * arriba: mostrarle "0% de avance" contando datos que nunca toca sería
- * confuso y falso.
+ * alcance del usuario y la casa activa — a diferencia de
+ * `obtenerEstadisticas`, que cuenta RC propietario/suplente. El
+ * Representante General nunca captura RC (ni siquiera lo ve), así que su
+ * dashboard debe usar esta función y no la de arriba: mostrarle "0% de
+ * avance" contando datos que nunca toca sería confuso y falso.
  */
-export async function obtenerEstadisticasRuta(usuario: UsuarioAutenticado): Promise<EstadisticasRuta> {
+export async function obtenerEstadisticasRuta(
+  usuario: UsuarioAutenticado,
+  casa: Casa
+): Promise<EstadisticasRuta> {
   const filtro = filtroCasillasPorRol(usuario);
 
   const [totalCasillas, enlacesCapturados] = await Promise.all([
     prisma.casilla.count({ where: filtro }),
-    prisma.enlaceCasilla.count({ where: { casilla: filtro } }),
+    prisma.enlaceCasilla.count({ where: { casa, casilla: filtro } }),
   ]);
 
   return {
@@ -84,12 +95,14 @@ export type EstadisticaPorMunicipio = {
   porcentajeAvance: number;
 };
 
-/** Desglose por municipio — usado en la vista de Estadísticas (solo Admin general). */
-export async function obtenerEstadisticasPorMunicipio(): Promise<EstadisticaPorMunicipio[]> {
+/** Desglose por municipio (para la casa dada) — vista de Estadísticas (solo Admin general). */
+export async function obtenerEstadisticasPorMunicipio(
+  casa: Casa
+): Promise<EstadisticaPorMunicipio[]> {
   const casillas = await prisma.casilla.findMany({
     select: {
       municipio: true,
-      representantes: { select: { tipo: true } },
+      representantes: { select: { tipo: true }, where: { casa } },
     },
   });
 

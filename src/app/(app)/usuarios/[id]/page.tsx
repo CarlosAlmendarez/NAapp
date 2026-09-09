@@ -39,6 +39,7 @@ export default async function EditarUsuarioPage({
               correo: usuarioObjetivo.correo,
               rol: usuarioObjetivo.rol,
               activo: usuarioObjetivo.activo,
+              casa: usuarioObjetivo.casa,
               localidades: usuarioObjetivo.localidades.map((l) => ({ tipo: l.tipo, valor: l.valor })),
             }}
           />

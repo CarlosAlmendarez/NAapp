@@ -36,6 +36,17 @@ enum TipoRepresentante {
   SUPLENTE
 }
 
+// "Casa": las dos estructuras paralelas de la operación (Casa 26 y Casa
+// 52). Comparten exactamente el mismo catálogo de casillas, pero llevan
+// datos de RC, enlace de Rutas y asistentes por separado. El catálogo
+// (modelo Casilla) NO se parte por casa. Quien captura elige primero su
+// casa activa (cookie `casa`, ver src/lib/casa.ts) y todo lo que captura
+// o consulta queda acotado a ella.
+enum Casa {
+  C26
+  C52
+}
+
 // Unidad geográfica/política por la que se puede acotar el acceso de un
 // capturador. Un municipio grande puede estar repartido en varios
 // distritos locales (ej. San Luis Potosí capital: distritos 4 a 8;
@@ -79,6 +90,13 @@ model Usuario {
   passwordHash String
   rol          Rol
   activo       Boolean  @default(true)
+
+  // Solo se usa (y se exige) cuando rol = REPRESENTANTE_GENERAL: indica de
+  // qué casa es RG. La unicidad "un RG por distrito local" pasa a ser "un
+  // RG por distrito local POR casa" (ver actions/usuarios.ts). No acota lo
+  // que el RG puede capturar (cualquiera captura en ambas casas), solo
+  // define al RG "nominal" de cada casilla en esa casa.
+  casa         Casa?
 
   // Contador de versión de sesión. Se incrementa para invalidar de
   // inmediato todos los tokens de sesión emitidos previamente (botón
@@ -159,7 +177,9 @@ model Casilla {
 
   representantes RepresentanteCasilla[]
   asistentes     AsistenteElectoral[]
-  enlace         EnlaceCasilla?
+  // Uno por casa (ver @@unique([casillaId, casa]) en EnlaceCasilla): como
+  // máximo un enlace de Rutas para la Casa 26 y otro para la Casa 52.
+  enlaces        EnlaceCasilla[]
 
   // Una sección puede tener varias casillas (básica, contigua 1, 2...) pero
   // la combinación sección + tipo de casilla es única.
@@ -175,6 +195,9 @@ model RepresentanteCasilla {
   casillaId String
   casilla   Casilla           @relation(fields: [casillaId], references: [id], onDelete: Cascade)
   tipo      TipoRepresentante
+  // Casa a la que pertenece este dato (ver enum Casa). Las capturas
+  // previas a esta columna se migraron a C26.
+  casa      Casa
 
   nombre            String
   apellidoPaterno   String
@@ -194,9 +217,10 @@ model RepresentanteCasilla {
   updatedBy   Usuario? @relation("RepresentanteUpdatedBy", fields: [updatedById], references: [id])
   updatedAt   DateTime @updatedAt
 
-  // Como máximo un propietario y un suplente por casilla.
-  @@unique([casillaId, tipo])
+  // Como máximo un propietario y un suplente por casilla POR casa.
+  @@unique([casillaId, tipo, casa])
   @@index([casillaId])
+  @@index([casa])
   @@map("representantes_casilla")
 }
 
@@ -204,6 +228,10 @@ model AsistenteElectoral {
   id        String  @id @default(cuid())
   casillaId String
   casilla   Casilla @relation(fields: [casillaId], references: [id], onDelete: Cascade)
+
+  // Casa a la que pertenece este dato (ver enum Casa). Las capturas
+  // previas a esta columna se migraron a C26.
+  casa      Casa
 
   nombre            String
   apellidoPaterno   String
@@ -221,6 +249,7 @@ model AsistenteElectoral {
   updatedAt   DateTime @updatedAt
 
   @@index([casillaId])
+  @@index([casa])
   @@map("asistentes_electorales")
 }
 
@@ -233,7 +262,8 @@ model AsistenteElectoral {
 // `ordenEnRuta` fija la posición de esa casilla dentro de su ruta (el
 // orden en que se fue agregando en el formulario). Como máximo un enlace
 // por casilla — de ahí el `@unique` en casillaId, a diferencia de
-// AsistenteElectoral que sí admite varios. El orden de las rutas
+// AsistenteElectoral que sí admite varios — pero uno por casa (ver
+// @@unique([casillaId, casa])). El orden de las rutas
 // mostrado en la UI es `capturadoEn` ascendente, y no cambia al editar
 // (solo `updatedAt` se mueve): se puede corregir el contenido de una
 // parada ya visitada, o volver a agregarla a una ruta nueva (lo que
@@ -242,8 +272,11 @@ model AsistenteElectoral {
 // igual que con Casilla, para proteger el registro).
 model EnlaceCasilla {
   id        String  @id @default(cuid())
-  casillaId String  @unique
+  casillaId String
   casilla   Casilla @relation(fields: [casillaId], references: [id], onDelete: Cascade)
+  // Casa a la que pertenece este enlace (ver enum Casa). Las capturas
+  // previas a esta columna se migraron a C26.
+  casa      Casa
 
   nombre            String
   apellidoPaterno   String
@@ -269,8 +302,11 @@ model EnlaceCasilla {
   updatedBy   Usuario? @relation("EnlaceUpdatedBy", fields: [updatedById], references: [id])
   updatedAt   DateTime @updatedAt
 
+  // Como máximo un enlace por casilla POR casa.
+  @@unique([casillaId, casa])
   @@index([casillaId])
   @@index([rutaId])
+  @@index([casa])
   @@map("enlaces_casilla")
 }
 

@@ -1,8 +1,9 @@
 import Link from "next/link";
-import type { Rol } from "@prisma/client";
+import type { Casa, Rol } from "@prisma/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ROL_LABELS } from "@/lib/roles";
+import { CASA_LABEL } from "@/lib/casa";
 import { etiquetasLocalidades } from "@/lib/localidad";
 import type { LocalidadAsignada } from "@/lib/auth-helpers";
 
@@ -12,6 +13,7 @@ type UsuarioResumen = {
   correo: string;
   rol: Rol;
   activo: boolean;
+  casa: Casa | null;
   localidades: LocalidadAsignada[];
 };
 
@@ -32,7 +34,10 @@ export function UsuarioCard({ usuario }: { usuario: UsuarioResumen }) {
             </Badge>
           </div>
           <p className="truncate text-sm text-muted-foreground">{usuario.correo}</p>
-          <p className="text-sm text-foreground">{ROL_LABELS[usuario.rol]}</p>
+          <p className="text-sm text-foreground">
+            {ROL_LABELS[usuario.rol]}
+            {usuario.casa && ` · ${CASA_LABEL[usuario.casa]}`}
+          </p>
           {usuario.localidades.length > 0 && (
             <p className="text-xs text-muted-foreground">
               {etiquetasLocalidades(usuario.localidades)}

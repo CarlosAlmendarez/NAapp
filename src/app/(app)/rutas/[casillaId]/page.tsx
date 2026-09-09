@@ -3,6 +3,9 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { requireUser, tieneAccesoALocalidad, puedeUsarModuloRutas } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { requireCasaActiva } from "@/lib/casa-server";
+import { CASA_LABEL } from "@/lib/casa";
+import { obtenerResumenRcDeCasillas } from "@/lib/rutas-query";
 import { RutaForm } from "@/components/casillas/ruta-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -12,6 +15,7 @@ export default async function CapturarRutaPage({
   params: Promise<{ casillaId: string }>;
 }) {
   const usuario = await requireUser();
+  const casa = await requireCasaActiva();
   const { casillaId } = await params;
 
   // Solo Admin general y Representante General usan el módulo de Rutas —
@@ -21,10 +25,17 @@ export default async function CapturarRutaPage({
 
   const casilla = await prisma.casilla.findUnique({
     where: { id: casillaId },
-    include: { enlace: true },
+    include: { enlaces: { where: { casa } } },
   });
   if (!casilla) notFound();
   if (!tieneAccesoALocalidad(usuario, casilla)) notFound();
+
+  const enlace = casilla.enlaces[0] ?? null;
+  const resumenRc = await obtenerResumenRcDeCasillas(
+    [{ id: casilla.id, distritoLocal: casilla.distritoLocal }],
+    casa
+  );
+  const rc = resumenRc.get(casilla.id) ?? { propietario: null, suplente: null, rgNombre: null };
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -39,11 +50,13 @@ export default async function CapturarRutaPage({
       <Card>
         <CardHeader>
           <CardTitle>
-            Ruta — Sección {casilla.seccion} · Distrito local {casilla.distritoLocal}
+            Ruta — Sección {casilla.seccion} · Distrito local {casilla.distritoLocal} ·{" "}
+            {CASA_LABEL[casa]}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <RutaForm
+            casaLabel={CASA_LABEL[casa]}
             paradaInicial={{
               id: casilla.id,
               distritoLocal: casilla.distritoLocal,
@@ -52,16 +65,17 @@ export default async function CapturarRutaPage({
               tipoCasilla: casilla.tipoCasilla,
               coloniaLocalidad: casilla.coloniaLocalidad,
               ubicacion: casilla.ubicacion,
-              tieneEnlace: casilla.enlace !== null,
+              tieneEnlace: enlace !== null,
+              rc,
             }}
             personaExistente={
-              casilla.enlace
+              enlace
                 ? {
-                    nombre: casilla.enlace.nombre,
-                    apellidoPaterno: casilla.enlace.apellidoPaterno,
-                    apellidoMaterno: casilla.enlace.apellidoMaterno,
-                    telefono: casilla.enlace.telefono,
-                    correoElectronico: casilla.enlace.correoElectronico,
+                    nombre: enlace.nombre,
+                    apellidoPaterno: enlace.apellidoPaterno,
+                    apellidoMaterno: enlace.apellidoMaterno,
+                    telefono: enlace.telefono,
+                    correoElectronico: enlace.correoElectronico,
                   }
                 : undefined
             }

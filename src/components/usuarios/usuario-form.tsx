@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { Rol } from "@prisma/client";
+import type { Casa, Rol } from "@prisma/client";
 import { crearUsuario, actualizarUsuario } from "@/actions/usuarios";
+import { CASAS, CASA_LABEL } from "@/lib/casa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +27,7 @@ type UsuarioExistente = {
   correo: string;
   rol: Rol;
   activo: boolean;
+  casa: Casa | null;
   localidades: LocalidadAsignada[];
 };
 
@@ -44,6 +46,7 @@ export function UsuarioForm({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [rol, setRol] = useState<Rol>(usuario?.rol ?? "CAPTURADOR");
   const [activo, setActivo] = useState(usuario?.activo ?? true);
+  const [casa, setCasa] = useState<Casa | "">(usuario?.casa ?? "");
   const [localidades, setLocalidades] = useState<LocalidadAsignada[]>(usuario?.localidades ?? []);
 
   function onSubmit(formData: FormData) {
@@ -51,6 +54,7 @@ export function UsuarioForm({
     setFieldErrors({});
 
     startTransition(async () => {
+      const casaEnviada = rol === "REPRESENTANTE_GENERAL" ? casa || null : null;
       const resultado = usuario
         ? await actualizarUsuario({
             id: usuario.id,
@@ -58,6 +62,7 @@ export function UsuarioForm({
             correo: formData.get("correo"),
             rol,
             activo,
+            casa: casaEnviada,
             localidades,
           })
         : await crearUsuario({
@@ -65,6 +70,7 @@ export function UsuarioForm({
             correo: formData.get("correo"),
             password: formData.get("password"),
             rol,
+            casa: casaEnviada,
             localidades,
           });
 
@@ -84,7 +90,7 @@ export function UsuarioForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="nombre">Nombre completo</Label>
-        <Input id="nombre" name="nombre" defaultValue={usuario?.nombre} required />
+        <Input id="nombre" name="nombre" defaultValue={usuario?.nombre} required uppercase />
         <FieldError messages={fieldErrors.nombre} />
       </div>
 
@@ -122,6 +128,29 @@ export function UsuarioForm({
         </Select>
         <FieldError messages={fieldErrors.rol} />
       </div>
+
+      {rol === "REPRESENTANTE_GENERAL" && (
+        <div className="space-y-1.5">
+          <Label htmlFor="casa">Casa del RG</Label>
+          <Select value={casa} onValueChange={(v) => setCasa(v as Casa)}>
+            <SelectTrigger id="casa">
+              <SelectValue placeholder="Elige la casa (26 o 52)" />
+            </SelectTrigger>
+            <SelectContent>
+              {CASAS.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {CASA_LABEL[c]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Cada distrito local puede tener un RG por casa. Este RG solo será el
+            responsable “nominal” de las casillas de su distrito en esta casa.
+          </p>
+          <FieldError messages={fieldErrors.casa} />
+        </div>
+      )}
 
       {(rol === "CAPTURADOR" || rol === "REPRESENTANTE_GENERAL") && (
         <LocalidadPickerConLabel
