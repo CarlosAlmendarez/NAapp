@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth-helpers";
+import { requireUser, puedeAdministrarCasillas } from "@/lib/auth-helpers";
 import { requireCasaActiva } from "@/lib/casa-server";
 import { CASA_LABEL } from "@/lib/casa";
 import { obtenerEstadisticas, obtenerEstadisticasRuta } from "@/lib/stats";
@@ -13,13 +13,14 @@ import { etiquetasLocalidades } from "@/lib/localidad";
 export default async function DashboardPage() {
   const usuario = await requireUser();
   const casa = await requireCasaActiva();
-  // El RG nunca captura ni ve RC propietario/suplente — su avance se mide
-  // por enlaces capturados en el módulo de Rutas, no por obtenerEstadisticas
-  // (que cuenta RC). Los demás roles siguen viendo el avance de RC de
-  // siempre. Todo acotado a la casa activa.
+
+  // El RG solo ve avance de Rutas (nunca captura RC). Los demás ven el
+  // avance de RC; el Admin general ve ADEMÁS el avance de Rutas (RG).
   const esRG = usuario.rol === "REPRESENTANTE_GENERAL";
+  const esAdminGeneral = usuario.rol === "ADMIN_GENERAL";
+
   const stats = esRG ? null : await obtenerEstadisticas(usuario, casa);
-  const statsRuta = esRG ? await obtenerEstadisticasRuta(usuario) : null;
+  const statsRuta = esRG || esAdminGeneral ? await obtenerEstadisticasRuta(usuario) : null;
 
   return (
     <div className="space-y-6">
@@ -45,18 +46,27 @@ export default async function DashboardPage() {
           </Card>
         )}
 
-      {esRG ? <RutaStatsCards stats={statsRuta!} /> : <StatsCards stats={stats!} />}
+      {esRG ? (
+        <RutaStatsCards stats={statsRuta!} />
+      ) : (
+        <>
+          <StatsCards stats={stats!} />
+          {esAdminGeneral && statsRuta && (
+            <RutaStatsCards stats={statsRuta} variante="global" />
+          )}
+        </>
+      )}
 
       <Card>
         <CardHeader>
           <CardTitle>Acciones rápidas</CardTitle>
-          <CardDescription>Continúa con la captura de casillas.</CardDescription>
+          <CardDescription>Continúa con la captura.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
           <Button asChild>
             <Link href="/casillas">Ver casillas</Link>
           </Button>
-          {(usuario.rol === "ADMIN_GENERAL" || usuario.rol === "ADMIN_CASILLAS") && (
+          {puedeAdministrarCasillas(usuario) && (
             <Button asChild variant="secondary">
               <Link href="/casillas/nueva">Agregar casilla</Link>
             </Button>

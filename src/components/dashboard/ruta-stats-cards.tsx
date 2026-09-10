@@ -2,17 +2,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { EstadisticasRuta } from "@/lib/stats";
 
 /**
- * Tarjetas de avance para el módulo de Rutas (RG) — a propósito distintas
- * de StatsCards: esas cuentan RC propietario/suplente, que el RG nunca
- * captura ni ve.
+ * Tarjetas de avance para el módulo de Rutas (enlaces) — a propósito
+ * distintas de StatsCards: esas cuentan RC propietario/suplente. Con
+ * `variante="propia"` (por defecto) el texto habla de "tu ruta" (RG); con
+ * `variante="global"` habla del avance de Rutas en todo el alcance (Admin
+ * general en su dashboard).
  */
-export function RutaStatsCards({ stats }: { stats: EstadisticasRuta }) {
+export function RutaStatsCards({
+  stats,
+  variante = "propia",
+}: {
+  stats: EstadisticasRuta;
+  variante?: "propia" | "global";
+}) {
+  const global = variante === "global";
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="text-base font-medium text-muted-foreground">
-            Avance de tu ruta (enlaces capturados)
+            {global
+              ? "Avance de Rutas / RG (enlaces capturados)"
+              : "Avance de tu ruta (enlaces capturados)"}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -35,7 +46,9 @@ export function RutaStatsCards({ stats }: { stats: EstadisticasRuta }) {
         <Card>
           <CardContent className="p-4">
             <p className="text-2xl font-semibold text-foreground">{stats.totalCasillas}</p>
-            <p className="text-xs text-muted-foreground">Casillas en tu alcance</p>
+            <p className="text-xs text-muted-foreground">
+              {global ? "Casillas totales" : "Casillas en tu alcance"}
+            </p>
           </CardContent>
         </Card>
         <Card>

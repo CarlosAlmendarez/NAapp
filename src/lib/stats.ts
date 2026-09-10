@@ -88,41 +88,69 @@ export async function obtenerEstadisticasRuta(
   };
 }
 
-export type EstadisticaPorMunicipio = {
-  municipio: string;
+export type AgruparEstadistica = "municipio" | "distrito";
+
+export type EstadisticaGrupo = {
+  grupo: string;
   totalCasillas: number;
-  completas: number;
-  porcentajeAvance: number;
+  conPropietario: number;
+  conSuplente: number;
+  rcCompletas: number;
+  rcPorcentaje: number;
+  enlaces: number;
+  rgPorcentaje: number;
 };
 
-/** Desglose por municipio (para la casa dada) — vista de Estadísticas (solo Admin general). */
-export async function obtenerEstadisticasPorMunicipio(
-  casa: Casa
-): Promise<EstadisticaPorMunicipio[]> {
+/**
+ * Desglose por municipio o por distrito local (para la casa dada) — vista
+ * de Estadísticas (solo Admin general). Incluye avance de RC (propietario
+ * + suplente completos) y de RG (enlace de Rutas capturado, que NO es por
+ * casa). El orden/filtro se aplican en la página.
+ */
+export async function obtenerEstadisticasPorGrupo(
+  casa: Casa,
+  agrupar: AgruparEstadistica
+): Promise<EstadisticaGrupo[]> {
   const casillas = await prisma.casilla.findMany({
     select: {
       municipio: true,
+      distritoLocal: true,
       representantes: { select: { tipo: true }, where: { casa } },
+      enlace: { select: { id: true } },
     },
   });
 
-  const acumulado = new Map<string, { total: number; completas: number }>();
+  type Acc = {
+    total: number;
+    conPropietario: number;
+    conSuplente: number;
+    rcCompletas: number;
+    enlaces: number;
+  };
+  const acumulado = new Map<string, Acc>();
+
   for (const casilla of casillas) {
-    const entry = acumulado.get(casilla.municipio) ?? { total: 0, completas: 0 };
+    const clave = agrupar === "municipio" ? casilla.municipio : casilla.distritoLocal;
+    const entry: Acc =
+      acumulado.get(clave) ??
+      { total: 0, conPropietario: 0, conSuplente: 0, rcCompletas: 0, enlaces: 0 };
     entry.total += 1;
-    const tiposCapturados = new Set(casilla.representantes.map((r) => r.tipo));
-    if (tiposCapturados.has("PROPIETARIO") && tiposCapturados.has("SUPLENTE")) {
-      entry.completas += 1;
-    }
-    acumulado.set(casilla.municipio, entry);
+    const tipos = new Set(casilla.representantes.map((r) => r.tipo));
+    if (tipos.has("PROPIETARIO")) entry.conPropietario += 1;
+    if (tipos.has("SUPLENTE")) entry.conSuplente += 1;
+    if (tipos.has("PROPIETARIO") && tipos.has("SUPLENTE")) entry.rcCompletas += 1;
+    if (casilla.enlace) entry.enlaces += 1;
+    acumulado.set(clave, entry);
   }
 
-  return Array.from(acumulado.entries())
-    .map(([municipio, { total, completas }]) => ({
-      municipio,
-      totalCasillas: total,
-      completas,
-      porcentajeAvance: total === 0 ? 0 : Math.round((completas / total) * 100),
-    }))
-    .sort((a, b) => a.municipio.localeCompare(b.municipio));
+  return Array.from(acumulado.entries()).map(([grupo, e]) => ({
+    grupo,
+    totalCasillas: e.total,
+    conPropietario: e.conPropietario,
+    conSuplente: e.conSuplente,
+    rcCompletas: e.rcCompletas,
+    rcPorcentaje: e.total === 0 ? 0 : Math.round((e.rcCompletas / e.total) * 100),
+    enlaces: e.enlaces,
+    rgPorcentaje: e.total === 0 ? 0 : Math.round((e.enlaces / e.total) * 100),
+  }));
 }

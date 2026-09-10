@@ -44,11 +44,12 @@ export function sinRestriccionGeografica(usuario: UsuarioAutenticado): boolean {
 }
 
 /**
- * Roles que pueden crear/editar/eliminar casillas (el catálogo en sí).
- * El Representante General queda excluido a propósito: solo administra el
- * módulo de Rutas (ver ROLES_MODULO_RUTAS), nunca el catálogo.
+ * Roles que pueden crear casillas (el catálogo en sí). Solo el
+ * Administrador de casillas: ni el Administrador general, ni el
+ * Capturador, ni el RG dan de alta casillas. Editar/eliminar el catálogo
+ * está apagado para todos (ver actions/casillas.ts).
  */
-const ROLES_ADMINISTRAN_CASILLAS: Rol[] = ["ADMIN_GENERAL", "ADMIN_CASILLAS"];
+const ROLES_ADMINISTRAN_CASILLAS: Rol[] = ["ADMIN_CASILLAS"];
 
 export function puedeAdministrarCasillas(usuario: UsuarioAutenticado): boolean {
   return ROLES_ADMINISTRAN_CASILLAS.includes(usuario.rol);

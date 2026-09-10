@@ -101,15 +101,24 @@ Roles (`Rol` enum) and helper sets:
 
 | Rol | Casilla catalog | Captures RC | Rutas module | Geo-scoped |
 |---|---|---|---|---|
-| `ADMIN_GENERAL` | create | — | yes | no |
+| `ADMIN_GENERAL` | — | — | yes | no |
 | `ADMIN_CASILLAS` | create | — | — | no |
 | `CAPTURADOR` | — | yes | — | **yes** (via `UsuarioLocalidad`) |
 | `REPRESENTANTE_GENERAL` (RG) | — | — | yes | **yes** (one RG per distrito local) |
 
-Editing and deleting `Casilla` are **disabled for everyone, including
-ADMIN_GENERAL** (`actualizarCasilla`/`eliminarCasilla` in `src/actions/casillas.ts`
-always throw) to protect the official catalog. `EnlaceCasilla` likewise has no
-delete action.
+Creating `Casilla` is now **only** `ADMIN_CASILLAS` (`ROLES_ADMINISTRAN_CASILLAS`
+in `auth-helpers.ts` / `puedeAdministrarCasillas`); `ADMIN_GENERAL` no longer sees
+"Nueva casilla" / "Agregar casilla" and `crearCasilla` rejects it. Editing and
+deleting `Casilla` stay **disabled for everyone**
+(`actualizarCasilla`/`eliminarCasilla` always throw) to protect the official
+catalog. `EnlaceCasilla` has no delete action, but `quitarCasillaDeRuta` removes a
+casilla from a route.
+
+The `ADMIN_GENERAL` dashboard shows both the RC progress (`StatsCards`) and the
+RG/Rutas progress (`RutaStatsCards variante="global"`). `/estadisticas`
+(ADMIN_GENERAL only) groups by municipio **or** distrito local, sortable/filterable
+via `?agrupar=&orden=&dir=&buscar=`, and shows RC + RG summary panels plus a
+per-group breakdown of both.
 
 ### Geographic scoping — two independent dimensions
 

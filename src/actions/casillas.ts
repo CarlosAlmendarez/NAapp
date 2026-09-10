@@ -8,21 +8,21 @@ import { registrarAuditoria } from "@/lib/audit";
 import { ejecutarAccion, AccionError, type ActionResult } from "@/lib/action-result";
 
 /**
- * Crear casillas: solo Admin general y Admin de casillas. Ni el
- * Capturador ni el Representante General (RG) pueden crear la casilla en
+ * Crear casillas: SOLO el Admin de casillas. Ni el Admin general, ni el
+ * Capturador, ni el Representante General (RG) dan de alta la casilla en
  * sí — el Capturador solo captura RC dentro de su localidad, y el RG solo
  * recorre el módulo de Rutas capturando el enlace de cada casilla (ver
  * actions/representantes.ts y actions/enlaces.ts respectivamente).
  *
  * Editar y eliminar casillas están deshabilitados a propósito (para
- * ninguna cuenta, incluida Admin general) para proteger el catálogo
- * oficial contra ediciones o borrados accidentales — ver
- * `actualizarCasilla` y `eliminarCasilla` abajo.
+ * ninguna cuenta) para proteger el catálogo oficial contra ediciones o
+ * borrados accidentales — ver `actualizarCasilla` y `eliminarCasilla`
+ * abajo.
  */
 export async function crearCasilla(formData: unknown): Promise<ActionResult<{ id: string }>> {
   return ejecutarAccion(async () => {
     const usuario = await requireUserOrThrow();
-    requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS"]);
+    requireRole(usuario, ["ADMIN_CASILLAS"]);
 
     const datos = casillaSchema.parse(formData);
 
