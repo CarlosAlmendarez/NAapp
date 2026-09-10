@@ -51,8 +51,8 @@ export async function buscarCasillasRuta(
  * ya tiene enlace NO puede recapturarse. Con `rutaId` se edita una ruta
  * existente — sus casillas ya guardadas se corrigen y se pueden agregar
  * más (que deben estar libres); sin `rutaId` se crea una ruta nueva y
- * TODAS las casillas deben estar libres. No existe borrado: no se puede
- * quitar una parada ya guardada de su ruta.
+ * TODAS las casillas deben estar libres. Para quitar una parada de una
+ * ruta ya guardada se usa `quitarCasillaDeRuta`.
  */
 export async function guardarRutaEnlaces(
   formData: unknown,
@@ -174,5 +174,50 @@ export async function guardarRutaEnlaces(
     }
 
     return { guardadas: casillas.length };
+  });
+}
+
+/**
+ * Quita una casilla de su ruta: borra su `EnlaceCasilla`. La casilla
+ * vuelve a quedar "pendiente" (sin enlace) y puede volver a agregarse a
+ * una ruta. Si era la última parada de la ruta, la ruta deja de existir.
+ * Disponible para Admin general y RG, siempre que la casilla esté en su
+ * alcance geográfico.
+ */
+export async function quitarCasillaDeRuta(
+  casillaId: string
+): Promise<ActionResult<{ rutaId: string; quedanEnRuta: number }>> {
+  return ejecutarAccion(async () => {
+    const usuario = await requireUserOrThrow();
+    requireRole(usuario, [...ROLES_MODULO_RUTAS]);
+
+    const casilla = await prisma.casilla.findUnique({
+      where: { id: casillaId },
+      include: { enlace: true },
+    });
+    if (!casilla?.enlace) {
+      throw new AccionError("Esta casilla no forma parte de ninguna ruta.");
+    }
+    requireLocalidadAccess(usuario, casilla);
+
+    const { enlace } = casilla;
+    await prisma.enlaceCasilla.delete({ where: { casillaId } });
+
+    await registrarAuditoria({
+      usuarioId: usuario.id,
+      accion: "ELIMINAR",
+      entidad: "EnlaceCasilla",
+      entidadId: casillaId,
+      datosAntes: { ...enlace, claveElectorCifrada: "[cifrado]" },
+    });
+
+    const quedanEnRuta = await prisma.enlaceCasilla.count({
+      where: { rutaId: enlace.rutaId },
+    });
+
+    revalidatePath("/rutas");
+    revalidatePath(`/casillas/${casillaId}`);
+
+    return { rutaId: enlace.rutaId, quedanEnRuta };
   });
 }

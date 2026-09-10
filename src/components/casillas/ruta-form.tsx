@@ -2,8 +2,12 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
-import { buscarCasillasRuta, guardarRutaEnlaces } from "@/actions/enlaces";
+import { Plus, X, Minus } from "lucide-react";
+import {
+  buscarCasillasRuta,
+  guardarRutaEnlaces,
+  quitarCasillaDeRuta,
+} from "@/actions/enlaces";
 import type { CasillaBusquedaRuta, RcResumenCasilla } from "@/lib/rutas-query";
 import { nombreCompleto } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -99,6 +103,26 @@ export function RutaForm({
 
   function quitarCasilla(id: string) {
     setParadas((actuales) => actuales.filter((p) => p.id !== id));
+  }
+
+  // Quita una parada YA guardada de la ruta (borra su enlace en el
+  // servidor). Si era la última, la ruta desaparece y se vuelve a /rutas.
+  function quitarParadaGuardada(id: string) {
+    setError(null);
+    startTransition(async () => {
+      const resultado = await quitarCasillaDeRuta(id);
+      if (!resultado.success) {
+        setError(resultado.error);
+        return;
+      }
+      // Si la ruta se quedó sin casillas en la BD, ya no existe.
+      if (resultado.data.quedanEnRuta === 0) {
+        router.push("/rutas");
+      } else {
+        setParadas((actuales) => actuales.filter((p) => p.id !== id));
+      }
+      router.refresh();
+    });
   }
 
   function guardar() {
@@ -225,8 +249,8 @@ export function RutaForm({
 
         {esEdicion && (
           <p className="text-xs text-muted-foreground">
-            Estás editando una ruta ya guardada. Puedes corregir los datos del enlace y
-            agregar más casillas; las que ya forman parte de la ruta no se pueden quitar.
+            Estás editando una ruta ya guardada. Puedes corregir los datos del enlace,
+            agregar más casillas o quitar una de la ruta con el botón −.
           </p>
         )}
 
@@ -237,10 +261,10 @@ export function RutaForm({
         ) : (
           <ol className="space-y-2">
             {paradas.map((parada, indice) => {
-              // Solo al editar una ruta existente sus casillas quedan fijas
-              // (no se pueden quitar); al crear una ruta nueva todas se
-              // pueden quitar.
-              const fija = esEdicion && idsFijos.has(parada.id);
+              // "guardada" = ya existe en la ruta en la BD: al quitarla se
+              // borra su enlace (acción en servidor). Las paradas nuevas
+              // aún sin guardar solo se quitan de la lista local.
+              const guardada = esEdicion && idsFijos.has(parada.id);
               return (
                 <li
                   key={parada.id}
@@ -256,7 +280,7 @@ export function RutaForm({
                         <Badge variant={varianteTipoCasilla(parada.tipoCasilla)}>
                           {formatTipoCasilla(parada.tipoCasilla)}
                         </Badge>
-                        {fija && <Badge variant="secondary">En la ruta</Badge>}
+                        {guardada && <Badge variant="secondary">En la ruta</Badge>}
                       </div>
                       <p className="truncate text-xs text-muted-foreground">
                         {parada.municipio} · {parada.distritoLocal} · {parada.coloniaLocalidad}
@@ -264,11 +288,25 @@ export function RutaForm({
                       <RcContexto rc={parada.rc} casaLabel={casaLabel} />
                     </div>
                   </div>
-                  {!fija && (
+                  {guardada ? (
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
+                      className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      aria-label={`Quitar de la ruta la casilla de la sección ${parada.seccion}`}
+                      title="Quitar de la ruta"
+                      disabled={isPending}
+                      onClick={() => quitarParadaGuardada(parada.id)}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0"
                       aria-label={`Quitar casilla sección ${parada.seccion}`}
                       onClick={() => quitarCasilla(parada.id)}
                     >

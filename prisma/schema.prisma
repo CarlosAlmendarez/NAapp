@@ -269,8 +269,8 @@ model AsistenteElectoral {
 // puede recapturar; solo se corrige desde "Editar ruta". El orden de las
 // rutas en la UI es `capturadoEn` ascendente y no cambia al editar (solo
 // `updatedAt`): se puede corregir el contenido de una parada, agregar más
-// casillas a la ruta, pero no quitar una parada ya guardada (no existe
-// acción de borrado, igual que con Casilla).
+// casillas a la ruta, o quitar una parada (borra su EnlaceCasilla y la
+// casilla vuelve a quedar libre — ver quitarCasillaDeRuta).
 model EnlaceCasilla {
   id        String  @id @default(cuid())
   casillaId String  @unique
