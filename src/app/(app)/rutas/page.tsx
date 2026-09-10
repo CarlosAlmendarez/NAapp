@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Download } from "lucide-react";
+import { Download, Printer } from "lucide-react";
 import { redirect } from "next/navigation";
 import { requireUser, puedeUsarModuloRutas, sinRestriccionGeografica } from "@/lib/auth-helpers";
 import { listarCasillasParaRuta, type CasillaParaRuta, type RutaCapturada } from "@/lib/rutas-query";
@@ -43,8 +43,17 @@ export default async function RutasPage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {/* Solo Admin general — ni siquiera el RG que captura las
-              rutas. La clave de elector nunca se incluye. */}
+          {/* PDF de rutas: Admin general y RG. Incluye la información
+              completa de casillas y el RC de ambas casas. El Admin obtiene
+              todas las rutas de su alcance; el RG solo la suya. Para una
+              sola ruta, ver el botón "Imprimir" de cada tarjeta. */}
+          <Button asChild variant="outline">
+            <a href="/imprimir/rutas" target="_blank" rel="noopener">
+              <Printer className="h-4 w-4" />
+              Imprimir PDF
+            </a>
+          </Button>
+          {/* XLSX: solo Admin general (la clave de elector nunca se incluye). */}
           {usuario.rol === "ADMIN_GENERAL" && (
             <Button asChild variant="outline">
               <a href="/api/exportar/rutas">
@@ -125,9 +134,17 @@ function TarjetaRuta({ ruta }: { ruta: RutaCapturada }) {
               {ruta.casillas.length} {ruta.casillas.length === 1 ? "casilla" : "casillas"}
             </Badge>
           </CardTitle>
-          <Button asChild variant="outline" size="sm" className="shrink-0">
-            <Link href={`/rutas/editar/${ruta.rutaId}`}>Editar ruta</Link>
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <a href={`/imprimir/rutas?ruta=${ruta.rutaId}`} target="_blank" rel="noopener">
+                <Printer className="h-4 w-4" />
+                Imprimir
+              </a>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/rutas/editar/${ruta.rutaId}`}>Editar ruta</Link>
+            </Button>
+          </div>
         </div>
         <p className="text-xs text-muted-foreground">
           Capturada el {formatFecha(ruta.capturadoEn)} · Tel: {ruta.enlace.telefono}
