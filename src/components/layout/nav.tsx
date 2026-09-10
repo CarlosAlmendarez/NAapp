@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useLinkStatus } from "next/link";
 import type { Rol } from "@prisma/client";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Vote, Users, BarChart3, Map, Loader2 } from "lucide-react";
+import { LayoutDashboard, Vote, Users, BarChart3, Map, ScrollText, Loader2 } from "lucide-react";
 
 /**
  * Ícono del ítem de menú que se convierte en spinner mientras la
@@ -45,6 +45,7 @@ const ITEMS: { href: string; label: string; icon: typeof LayoutDashboard; roles:
     icon: BarChart3,
     roles: ["ADMIN_GENERAL"],
   },
+  { href: "/auditoria", label: "Auditoría", icon: ScrollText, roles: ["ADMIN_GENERAL"] },
   {
     href: "/casillas",
     label: "Casillas",

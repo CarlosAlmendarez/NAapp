@@ -3,6 +3,9 @@ import { requireUser, puedeAdministrarCasillas } from "@/lib/auth-helpers";
 import { requireCasaActiva } from "@/lib/casa-server";
 import { CASA_LABEL } from "@/lib/casa";
 import { obtenerEstadisticas, obtenerEstadisticasRuta } from "@/lib/stats";
+import { casillasPendientesDeRc } from "@/lib/casillas-query";
+import { formatNumero } from "@/lib/utils";
+import { ArrowRight } from "lucide-react";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { RutaStatsCards } from "@/components/dashboard/ruta-stats-cards";
 import { Button } from "@/components/ui/button";
@@ -23,6 +26,11 @@ export default async function DashboardPage() {
 
   const stats = esRG ? null : await obtenerEstadisticas(usuario, casa);
   const statsRuta = esRG || esAdminGeneral ? await obtenerEstadisticasRuta(usuario) : null;
+
+  // Llamada a la acción para el capturador: cuántas casillas le faltan y
+  // cuál es la siguiente.
+  const pendientesRc =
+    usuario.rol === "CAPTURADOR" ? await casillasPendientesDeRc(usuario, casa) : null;
 
   return (
     <div className="space-y-6">
@@ -47,6 +55,27 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         )}
+
+      {pendientesRc && pendientesRc.total > 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <p className="text-sm text-foreground">
+              Te faltan <strong>{formatNumero(pendientesRc.total)}</strong> casilla(s) por
+              capturar en tu alcance ({CASA_LABEL[casa]}).
+            </p>
+            {pendientesRc.siguienteId && (
+              <Button asChild size="sm">
+                <Link
+                  href={`/casillas/${pendientesRc.siguienteId}/representante/propietario`}
+                >
+                  Capturar la siguiente
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {esRG ? (
         <RutaStatsCards stats={statsRuta!} />

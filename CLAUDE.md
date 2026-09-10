@@ -160,12 +160,24 @@ Every mutation lives in `src/actions/*.ts` (`"use server"`) and follows:
 
 ### Routing
 
-- `src/app/(app)/` — protected area; its `layout.tsx` calls `requireUser()`.
-  Contains `dashboard`, `casillas`, `rutas`, `usuarios`, `estadisticas`, `cuenta`.
-- `src/app/login/` — the only public page.
+- `src/app/(app)/` — protected area; its `layout.tsx` calls `requireUser()` and
+  wraps children in `ToastProvider` (`useToast()` — a toast survives the
+  navigation a form triggers because the provider sits above the page). Contains
+  `dashboard`, `casillas`, `rutas`, `usuarios`, `estadisticas`, `auditoria`
+  (AuditLog viewer, ADMIN_GENERAL), `cuenta`.
+- `src/app/login/` — the only public page. `src/app/api/health` — public DB ping
+  for the Vercel cron in `vercel.json` (keeps Neon warm).
+- `src/app/{error,global-error,not-found}.tsx` + `(app)/error.tsx` — friendly
+  boundaries instead of Next's raw error screen.
+- `src/app/imprimir/{rutas,casillas}/` — print/PDF views, outside `(app)` (no
+  chrome), gated in the page itself.
 - `src/middleware.ts` runs on the Node.js runtime (not Edge) and excludes
-  `api/auth`, `_next/*`, `favicon.ico`, `robots.txt`.
+  `api/auth`, `api/health`, `_next/*`, `favicon.ico`, `robots.txt`.
 - Path alias: `@/*` → `src/*`.
+- `ejecutarAccion` retries on transient DB-connection errors (`conReintento` in
+  `src/lib/db-retry.ts`) — Neon suspends when idle and the first request fails.
+- `next.config.ts` CSP adds `'unsafe-eval'` + HMR websocket **only in
+  development** so `npm run dev` works; the production CSP is unchanged.
 
 ### Rutas module
 

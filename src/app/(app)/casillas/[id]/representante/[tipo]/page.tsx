@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireCasaActiva } from "@/lib/casa-server";
 import { CASA_LABEL } from "@/lib/casa";
 import { obtenerRgDeCasilla } from "@/lib/rg-query";
+import { casillasPendientesDeRc } from "@/lib/casillas-query";
 import { decryptField } from "@/lib/crypto";
 import { RepresentanteForm } from "@/components/casillas/representante-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +54,9 @@ export default async function RepresentantePage({
     }
   }
 
+  // Para encadenar la captura sin volver al listado.
+  const { siguienteId } = await casillasPendientesDeRc(usuario, casa, id);
+
   return (
     <Card className="mx-auto max-w-2xl">
       <CardHeader>
@@ -71,6 +75,8 @@ export default async function RepresentantePage({
           casillaId={id}
           tipo={tipo}
           casaLabel={CASA_LABEL[casa]}
+          puedeCapturarSuplente={!rg}
+          siguientePendienteId={siguienteId}
           existente={
             existente
               ? {

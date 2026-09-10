@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
 import { FieldError } from "@/components/ui/field-error";
+import { useToast } from "@/components/ui/toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -41,6 +42,7 @@ export function UsuarioForm({
   usuario?: UsuarioExistente;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -79,6 +81,7 @@ export function UsuarioForm({
         setFieldErrors(resultado.fieldErrors ?? {});
         return;
       }
+      toast(usuario ? "Usuario actualizado" : "Usuario creado");
       router.push("/usuarios");
       router.refresh();
     });

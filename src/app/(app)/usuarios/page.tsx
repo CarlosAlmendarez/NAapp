@@ -16,6 +16,7 @@ import {
 import { ROL_LABELS } from "@/lib/roles";
 import { CASA_LABEL } from "@/lib/casa";
 import { etiquetasLocalidades } from "@/lib/localidad";
+import { formatFecha } from "@/lib/utils";
 import { UsuarioCard } from "@/components/usuarios/usuario-card";
 
 export const metadata = { title: "Usuarios" };
@@ -28,6 +29,17 @@ export default async function UsuariosPage() {
     include: { localidades: true },
     orderBy: { createdAt: "desc" },
   });
+
+  // Última actividad de cada usuario según la auditoría (login o cambio).
+  const ultimaActividad = await prisma.auditLog.groupBy({
+    by: ["usuarioId"],
+    _max: { timestamp: true },
+  });
+  const actividadPorUsuario = new Map(
+    ultimaActividad
+      .filter((a) => a.usuarioId)
+      .map((a) => [a.usuarioId as string, a._max.timestamp])
+  );
 
   return (
     <div className="space-y-4">
@@ -60,11 +72,14 @@ export default async function UsuariosPage() {
               <TableHead>Correo</TableHead>
               <TableHead>Rol</TableHead>
               <TableHead>Localidades</TableHead>
+              <TableHead>Última actividad</TableHead>
               <TableHead>Estado</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {usuarios.map((u) => (
+            {usuarios.map((u) => {
+              const act = actividadPorUsuario.get(u.id);
+              return (
               <TableRow key={u.id} className="cursor-pointer">
                 <TableCell>
                   <Link
@@ -82,13 +97,17 @@ export default async function UsuariosPage() {
                 <TableCell className="text-muted-foreground">
                   {etiquetasLocalidades(u.localidades)}
                 </TableCell>
+                <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                  {act ? formatFecha(act) : "—"}
+                </TableCell>
                 <TableCell>
                   <Badge variant={u.activo ? "success" : "outline"}>
                     {u.activo ? "Activo" : "Inactivo"}
                   </Badge>
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       </div>

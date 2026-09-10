@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
 import { FieldError } from "@/components/ui/field-error";
+import { useToast } from "@/components/ui/toast";
 
 export function CambiarPasswordForm() {
   const router = useRouter();
+  const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -33,6 +35,7 @@ export function CambiarPasswordForm() {
         return;
       }
       setExito(true);
+      toast("Contraseña actualizada");
       router.refresh();
     });
   }

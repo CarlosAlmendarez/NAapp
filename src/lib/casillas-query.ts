@@ -116,3 +116,61 @@ export async function distritosDisponibles(usuario: UsuarioAutenticado): Promise
   });
   return filas.map((f) => f.distritoLocal).sort((a, b) => a.localeCompare(b));
 }
+
+/**
+ * Casillas de la casa `casa` (en el alcance del usuario) que aún no
+ * tienen RC propietario capturado — pendientes de captura. Devuelve el
+ * total y, opcionalmente, la primera después de `despuesDeId` en el orden
+ * de captura (municipio → sección → tipo) para encadenar la captura sin
+ * volver al listado ("Guardar y siguiente").
+ */
+export async function casillasPendientesDeRc(
+  usuario: UsuarioAutenticado,
+  casa: Casa,
+  despuesDeId?: string
+): Promise<{ total: number; siguienteId: string | null }> {
+  const sinPropietario: Prisma.CasillaWhereInput = {
+    AND: [
+      filtroCasillasPorRol(usuario),
+      { representantes: { none: { tipo: "PROPIETARIO", casa } } },
+    ],
+  };
+
+  const total = await prisma.casilla.count({ where: sinPropietario });
+
+  let refer: { municipio: string; seccion: number; tipoCasilla: string } | null = null;
+  if (despuesDeId) {
+    refer = await prisma.casilla.findUnique({
+      where: { id: despuesDeId },
+      select: { municipio: true, seccion: true, tipoCasilla: true },
+    });
+  }
+
+  const orderBy: Prisma.CasillaOrderByWithRelationInput[] = [
+    { municipio: "asc" },
+    { seccion: "asc" },
+    { tipoCasilla: "asc" },
+  ];
+
+  const where: Prisma.CasillaWhereInput = refer
+    ? {
+        AND: [
+          sinPropietario,
+          {
+            OR: [
+              { municipio: { gt: refer.municipio } },
+              { municipio: refer.municipio, seccion: { gt: refer.seccion } },
+              {
+                municipio: refer.municipio,
+                seccion: refer.seccion,
+                tipoCasilla: { gt: refer.tipoCasilla },
+              },
+            ],
+          },
+        ],
+      }
+    : sinPropietario;
+
+  const siguiente = await prisma.casilla.findFirst({ where, orderBy, select: { id: true } });
+  return { total, siguienteId: siguiente?.id ?? null };
+}

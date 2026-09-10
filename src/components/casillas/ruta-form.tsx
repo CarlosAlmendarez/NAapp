@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { FieldError } from "@/components/ui/field-error";
+import { useToast } from "@/components/ui/toast";
 import { formatTipoCasilla, varianteTipoCasilla } from "@/lib/tipo-casilla";
 
 export type ParadaInicial = CasillaBusquedaRuta;
@@ -52,6 +53,7 @@ export function RutaForm({
   const esEdicion = Boolean(rutaId);
   const idsFijos = new Set((paradasIniciales ?? []).map((p) => p.id));
   const router = useRouter();
+  const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -66,6 +68,53 @@ export function RutaForm({
   );
 
   const [paradas, setParadas] = useState<ParadaInicial[]>(paradasIniciales ?? []);
+
+  // Borrador local de los datos del enlace para una ruta NUEVA (no la
+  // clave de elector). Evita perder lo tecleado si se cae la señal.
+  const claveBorrador = "borrador-ruta:nueva";
+  const [hayBorrador, setHayBorrador] = useState(false);
+  useEffect(() => {
+    if (esEdicion || personaExistente) return;
+    try {
+      setHayBorrador(Boolean(window.localStorage.getItem(claveBorrador)));
+    } catch {
+      /* ignore */
+    }
+  }, [esEdicion, personaExistente]);
+  useEffect(() => {
+    if (esEdicion || personaExistente) return;
+    const datos = { nombre, apellidoPaterno, apellidoMaterno, telefono, correoElectronico };
+    try {
+      if (Object.values(datos).some(Boolean)) {
+        window.localStorage.setItem(claveBorrador, JSON.stringify(datos));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [esEdicion, personaExistente, nombre, apellidoPaterno, apellidoMaterno, telefono, correoElectronico]);
+  function limpiarBorrador() {
+    try {
+      window.localStorage.removeItem(claveBorrador);
+    } catch {
+      /* ignore */
+    }
+    setHayBorrador(false);
+  }
+  function recuperarBorrador() {
+    try {
+      const raw = window.localStorage.getItem(claveBorrador);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (d.nombre) setNombre(d.nombre);
+      if (d.apellidoPaterno) setApellidoPaterno(d.apellidoPaterno);
+      if (d.apellidoMaterno) setApellidoMaterno(d.apellidoMaterno);
+      if (d.telefono) setTelefono(d.telefono);
+      if (d.correoElectronico) setCorreoElectronico(d.correoElectronico);
+    } catch {
+      /* ignore */
+    }
+    setHayBorrador(false);
+  }
 
   const [busqueda, setBusqueda] = useState("");
   const [resultados, setResultados] = useState<ParadaInicial[]>([]);
@@ -108,7 +157,14 @@ export function RutaForm({
 
   // Quita una parada YA guardada de la ruta (borra su enlace en el
   // servidor). Si era la última, la ruta desaparece y se vuelve a /rutas.
-  function quitarParadaGuardada(id: string) {
+  function quitarParadaGuardada(id: string, seccion: number) {
+    if (
+      !window.confirm(
+        `¿Quitar la casilla de la sección ${seccion} de esta ruta? Su enlace se borrará.`
+      )
+    ) {
+      return;
+    }
     setError(null);
     startTransition(async () => {
       const resultado = await quitarCasillaDeRuta(id);
@@ -116,6 +172,7 @@ export function RutaForm({
         setError(resultado.error);
         return;
       }
+      toast("Casilla quitada de la ruta");
       // Si la ruta se quedó sin casillas en la BD, ya no existe.
       if (resultado.data.quedanEnRuta === 0) {
         router.push("/rutas");
@@ -155,6 +212,8 @@ export function RutaForm({
         setFieldErrors(resultado.fieldErrors ?? {});
         return;
       }
+      limpiarBorrador();
+      toast(esEdicion ? "Ruta actualizada" : "Ruta guardada");
       router.push("/rutas");
       router.refresh();
     });
@@ -165,6 +224,28 @@ export function RutaForm({
   return (
     <div className="space-y-6">
       {error && <Alert variant="destructive">{error}</Alert>}
+
+      {hayBorrador && !esEdicion && !personaExistente && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-sm text-warning">
+          <span>Tienes un borrador sin guardar de los datos del enlace.</span>
+          <span className="flex gap-2">
+            <button
+              type="button"
+              onClick={recuperarBorrador}
+              className="font-medium underline underline-offset-2"
+            >
+              Recuperar
+            </button>
+            <button
+              type="button"
+              onClick={limpiarBorrador}
+              className="opacity-80 underline underline-offset-2"
+            >
+              Descartar
+            </button>
+          </span>
+        </div>
+      )}
 
       <div className="space-y-3">
         <h2 className="text-sm font-semibold text-muted-foreground">Datos del enlace</h2>
@@ -293,7 +374,7 @@ export function RutaForm({
                       aria-label={`Quitar de la ruta la casilla de la sección ${parada.seccion}`}
                       title="Quitar de la ruta"
                       disabled={isPending}
-                      onClick={() => quitarParadaGuardada(parada.id)}
+                      onClick={() => quitarParadaGuardada(parada.id, parada.seccion)}
                     >
                       <Minus className="h-4 w-4" />
                     </Button>
