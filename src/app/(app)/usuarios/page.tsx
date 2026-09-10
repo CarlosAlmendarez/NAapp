@@ -18,6 +18,8 @@ import { CASA_LABEL } from "@/lib/casa";
 import { etiquetasLocalidades } from "@/lib/localidad";
 import { UsuarioCard } from "@/components/usuarios/usuario-card";
 
+export const metadata = { title: "Usuarios" };
+
 export default async function UsuariosPage() {
   const usuario = await requireUser();
   if (usuario.rol !== "ADMIN_GENERAL") redirect("/dashboard");

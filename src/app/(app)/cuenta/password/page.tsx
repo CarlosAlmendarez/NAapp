@@ -3,6 +3,8 @@ import { requireUser } from "@/lib/auth-helpers";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CambiarPasswordForm } from "@/components/cuenta/cambiar-password-form";
 
+export const metadata = { title: "Cambiar contraseña" };
+
 // El cambio de contraseña "de autoservicio" es exclusivo del Administrador
 // general. Los demás roles no pueden rotar su propia contraseña desde la
 // app — si la necesitan cambiar, el Administrador general se las

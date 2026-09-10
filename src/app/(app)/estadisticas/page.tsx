@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+export const metadata = { title: "Estadísticas" };
+
 const ORDENES = new Set(["nombre", "rc", "rg", "casillas"]);
 
 function Barra({ porcentaje }: { porcentaje: number }) {

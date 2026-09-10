@@ -11,6 +11,8 @@ import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
+export const metadata = { title: "Casillas" };
+
 export default async function CasillasPage({
   searchParams,
 }: {

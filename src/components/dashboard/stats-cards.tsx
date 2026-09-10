@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatNumero } from "@/lib/utils";
 import type { Estadisticas } from "@/lib/stats";
 
 export function StatsCards({ stats }: { stats: Estadisticas }) {
@@ -21,7 +22,7 @@ export function StatsCards({ stats }: { stats: Estadisticas }) {
           <div className="flex items-end justify-between">
             <span className="text-4xl font-bold text-primary">{stats.porcentajeAvance}%</span>
             <span className="text-sm text-muted-foreground">
-              {stats.completas} de {stats.totalCasillas} casillas completas
+              {formatNumero(stats.completas)} de {formatNumero(stats.totalCasillas)} casillas completas
             </span>
           </div>
           <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-secondary">
@@ -37,7 +38,7 @@ export function StatsCards({ stats }: { stats: Estadisticas }) {
         {items.map((item) => (
           <Card key={item.label}>
             <CardContent className="p-4">
-              <p className="text-2xl font-semibold text-foreground">{item.value}</p>
+              <p className="text-2xl font-semibold text-foreground">{formatNumero(item.value)}</p>
               <p className="text-xs text-muted-foreground">{item.label}</p>
             </CardContent>
           </Card>

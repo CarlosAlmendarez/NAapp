@@ -1,5 +1,6 @@
 import { ZodError } from "zod";
 import { AutorizacionError } from "@/lib/auth-helpers";
+import { conReintento } from "@/lib/db-retry";
 
 export type ActionResult<T = undefined> =
   | { success: true; data: T }
@@ -31,10 +32,15 @@ export class AccionError extends Error {}
  * de Prisma/red) se registra en el log del servidor y se le muestra al
  * usuario un mensaje genérico — nunca se le expone `.message` tal cual,
  * porque podría traer detalles internos.
+ *
+ * Antes de rendirse, reintenta `fn` ante errores transitorios de conexión
+ * (la base Neon se suspende tras inactividad y el primer request luego
+ * falla) — ver `conReintento`. Es seguro porque esos errores ocurren
+ * antes de escribir nada.
  */
 export async function ejecutarAccion<T>(fn: () => Promise<T>): Promise<ActionResult<T>> {
   try {
-    const data = await fn();
+    const data = await conReintento(fn);
     return ok(data);
   } catch (error) {
     if (error instanceof ZodError) {

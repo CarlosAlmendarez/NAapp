@@ -30,6 +30,11 @@ export function normalizarTelefonoMx(value: string): string {
   return d.slice(0, 10);
 }
 
+/** Número con separador de miles en formato de México (3660 → "3,660"). */
+export function formatNumero(n: number): string {
+  return n.toLocaleString("es-MX");
+}
+
 export function formatFecha(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat("es-MX", {

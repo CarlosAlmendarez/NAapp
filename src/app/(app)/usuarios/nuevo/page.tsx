@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { UsuarioForm } from "@/components/usuarios/usuario-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+export const metadata = { title: "Nuevo usuario" };
+
 export default async function NuevoUsuarioPage() {
   const usuario = await requireUser();
   if (usuario.rol !== "ADMIN_GENERAL") redirect("/dashboard");

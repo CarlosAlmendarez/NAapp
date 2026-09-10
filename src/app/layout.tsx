@@ -17,7 +17,10 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Nueva Alianza SLP — Captura Electoral",
+  title: {
+    default: "Nueva Alianza SLP — Captura Electoral",
+    template: "%s · Nueva Alianza SLP",
+  },
   description: "Sistema interno de captura de casillas y representantes.",
   robots: { index: false, follow: false, nocache: true },
 };

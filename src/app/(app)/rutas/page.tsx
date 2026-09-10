@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { nombreCompleto, formatFecha } from "@/lib/utils";
 import { formatTipoCasilla, varianteTipoCasilla } from "@/lib/tipo-casilla";
 
+export const metadata = { title: "Rutas" };
+
 export default async function RutasPage({
   searchParams,
 }: {

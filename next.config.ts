@@ -4,13 +4,20 @@ import type { NextConfig } from "next";
 // sin inline scripts salvo el nonce-less mínimo que Next requiere para
 // hidratación (Next inyecta sus propios <script> de framework, permitidos
 // por 'self'). No cargamos fuentes, imágenes ni scripts de terceros.
+//
+// En DESARROLLO (`next dev`) se añade 'unsafe-eval' y el websocket de HMR:
+// el runtime de desarrollo de React/Next los necesita para hidratar. La
+// CSP de producción (`next build` + `next start`, y Vercel) queda idéntica
+// a antes — el equipo solo recupera el `npm run dev`.
+const isDev = process.env.NODE_ENV === "development";
+
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  `connect-src 'self'${isDev ? " ws: http://localhost:*" : ""}`,
   "frame-ancestors 'none'",
   "form-action 'self'",
   "base-uri 'self'",

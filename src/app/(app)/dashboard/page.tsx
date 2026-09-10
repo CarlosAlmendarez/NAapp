@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ROL_LABELS } from "@/lib/roles";
 import { etiquetasLocalidades } from "@/lib/localidad";
 
+export const metadata = { title: "Inicio" };
+
 export default async function DashboardPage() {
   const usuario = await requireUser();
   const casa = await requireCasaActiva();

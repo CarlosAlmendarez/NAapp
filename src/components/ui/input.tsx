@@ -16,7 +16,19 @@ type InputProps = React.ComponentProps<"input"> & {
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   (
-    { className, type, uppercase, telefonoMx, onChange, inputMode, maxLength, ...props },
+    {
+      className,
+      type,
+      uppercase,
+      telefonoMx,
+      onChange,
+      inputMode,
+      maxLength,
+      autoCapitalize,
+      autoComplete,
+      spellCheck,
+      ...props
+    },
     ref
   ) => {
     function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -40,6 +52,13 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         onChange={uppercase || telefonoMx ? handleChange : onChange}
         inputMode={telefonoMx ? "numeric" : inputMode}
         maxLength={maxLength}
+        // Teclado móvil afinado: en campos de MAYÚSCULAS el teléfono/móvil
+        // ofrece la tecla shift fijada y sin autocorrección; en teléfono,
+        // el teclado numérico y autocompletado de tel.
+        autoCapitalize={autoCapitalize ?? (uppercase ? "characters" : undefined)}
+        autoComplete={autoComplete ?? (telefonoMx ? "tel" : undefined)}
+        spellCheck={spellCheck ?? (uppercase || telefonoMx ? false : undefined)}
+        autoCorrect={uppercase || telefonoMx ? "off" : undefined}
         className={cn(
           "flex h-11 w-full rounded-md border border-input bg-card px-3 py-2 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:h-10 sm:text-sm",
           uppercase && "uppercase placeholder:normal-case",

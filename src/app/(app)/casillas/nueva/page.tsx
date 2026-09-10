@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { CasillaForm } from "@/components/casillas/casilla-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+export const metadata = { title: "Nueva casilla" };
+
 export default async function NuevaCasillaPage() {
   const usuario = await requireUser();
   if (!puedeAdministrarCasillas(usuario)) {

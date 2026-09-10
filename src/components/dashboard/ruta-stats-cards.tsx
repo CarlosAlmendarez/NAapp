@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatNumero } from "@/lib/utils";
 import type { EstadisticasRuta } from "@/lib/stats";
 
 /**
@@ -30,7 +31,7 @@ export function RutaStatsCards({
           <div className="flex items-end justify-between">
             <span className="text-4xl font-bold text-primary">{stats.porcentajeAvance}%</span>
             <span className="text-sm text-muted-foreground">
-              {stats.enlacesCapturados} de {stats.totalCasillas} casillas con enlace
+              {formatNumero(stats.enlacesCapturados)} de {formatNumero(stats.totalCasillas)} casillas con enlace
             </span>
           </div>
           <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-secondary">
@@ -45,7 +46,7 @@ export function RutaStatsCards({
       <div className="grid grid-cols-2 gap-4">
         <Card>
           <CardContent className="p-4">
-            <p className="text-2xl font-semibold text-foreground">{stats.totalCasillas}</p>
+            <p className="text-2xl font-semibold text-foreground">{formatNumero(stats.totalCasillas)}</p>
             <p className="text-xs text-muted-foreground">
               {global ? "Casillas totales" : "Casillas en tu alcance"}
             </p>
@@ -53,7 +54,7 @@ export function RutaStatsCards({
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-2xl font-semibold text-foreground">{stats.enlacesCapturados}</p>
+            <p className="text-2xl font-semibold text-foreground">{formatNumero(stats.enlacesCapturados)}</p>
             <p className="text-xs text-muted-foreground">Enlaces capturados</p>
           </CardContent>
         </Card>

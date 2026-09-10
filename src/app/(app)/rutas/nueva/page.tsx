@@ -7,6 +7,8 @@ import { CASA_LABEL } from "@/lib/casa";
 import { RutaForm } from "@/components/casillas/ruta-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+export const metadata = { title: "Nueva ruta" };
+
 export default async function NuevaRutaPage() {
   const usuario = await requireUser();
   if (!puedeUsarModuloRutas(usuario)) redirect("/dashboard");
