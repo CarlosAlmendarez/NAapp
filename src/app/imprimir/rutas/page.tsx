@@ -113,6 +113,10 @@ function CasillaBloque({ c }: { c: CasillaImpresion }) {
       <p className="c-row">
         <b>Ubicación:</b> {c.ubicacion}
       </p>
+      <p className="c-row">
+        <b>RG Casa 26:</b> {c.rg.C26 ?? <span className="rc-vacio">—</span>} ·{" "}
+        <b>RG Casa 52:</b> {c.rg.C52 ?? <span className="rc-vacio">—</span>}
+      </p>
       <div className="rc-grid">
         <RcCasa titulo="RC Casa 26" rc={c.rc.C26} />
         <RcCasa titulo="RC Casa 52" rc={c.rc.C52} />

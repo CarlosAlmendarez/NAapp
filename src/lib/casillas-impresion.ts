@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { filtroCasillasPorRol, type UsuarioAutenticado } from "@/lib/auth-helpers";
 import { decryptField } from "@/lib/crypto";
+import { rgPorDistritoYCasa } from "@/lib/rg-query";
 import type { PersonaImpresion, RcImpresion } from "@/lib/rutas-impresion";
 
 /**
@@ -71,37 +72,6 @@ function rcDeCasa(reps: RepRow[], casa: "C26" | "C52"): RcImpresion {
   };
 }
 
-/** RG (usuario REPRESENTANTE_GENERAL) por distrito local y por casa. */
-async function rgPorDistrito(
-  distritos: string[]
-): Promise<Map<string, { C26: string | null; C52: string | null }>> {
-  const mapa = new Map<string, { C26: string | null; C52: string | null }>();
-  for (const d of distritos) mapa.set(d, { C26: null, C52: null });
-  if (distritos.length === 0) return mapa;
-
-  const rgs = await prisma.usuario.findMany({
-    where: {
-      rol: "REPRESENTANTE_GENERAL",
-      activo: true,
-      casa: { not: null },
-      localidades: { some: { tipo: "DISTRITO_LOCAL", valor: { in: distritos } } },
-    },
-    select: {
-      nombre: true,
-      casa: true,
-      localidades: { where: { tipo: "DISTRITO_LOCAL" }, select: { valor: true } },
-    },
-  });
-
-  for (const rg of rgs) {
-    for (const l of rg.localidades) {
-      const entry = mapa.get(l.valor);
-      if (entry && rg.casa) entry[rg.casa] = rg.nombre;
-    }
-  }
-  return mapa;
-}
-
 export async function listarCasillasParaImpresion(
   usuario: UsuarioAutenticado,
   filtros: { municipio?: string; distrito?: string }
@@ -117,7 +87,7 @@ export async function listarCasillasParaImpresion(
   });
 
   const distritos = Array.from(new Set(casillas.map((c) => c.distritoLocal)));
-  const rgs = await rgPorDistrito(distritos);
+  const rgs = await rgPorDistritoYCasa(distritos);
 
   return casillas.map((c) => ({
     id: c.id,

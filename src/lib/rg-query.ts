@@ -33,3 +33,38 @@ export async function obtenerRgDeCasilla(
   });
   return rg;
 }
+
+/**
+ * Nombre del RG (Representante General) por distrito local y por casa,
+ * en bloque — para las vistas de impresión (rutas y casillas), que
+ * necesitan el RG de muchas casillas a la vez sin hacer N+1.
+ */
+export async function rgPorDistritoYCasa(
+  distritos: string[]
+): Promise<Map<string, { C26: string | null; C52: string | null }>> {
+  const mapa = new Map<string, { C26: string | null; C52: string | null }>();
+  for (const d of distritos) mapa.set(d, { C26: null, C52: null });
+  if (distritos.length === 0) return mapa;
+
+  const rgs = await prisma.usuario.findMany({
+    where: {
+      rol: "REPRESENTANTE_GENERAL",
+      activo: true,
+      casa: { not: null },
+      localidades: { some: { tipo: "DISTRITO_LOCAL", valor: { in: distritos } } },
+    },
+    select: {
+      nombre: true,
+      casa: true,
+      localidades: { where: { tipo: "DISTRITO_LOCAL" }, select: { valor: true } },
+    },
+  });
+
+  for (const rg of rgs) {
+    for (const l of rg.localidades) {
+      const entry = mapa.get(l.valor);
+      if (entry && rg.casa) entry[rg.casa] = rg.nombre;
+    }
+  }
+  return mapa;
+}

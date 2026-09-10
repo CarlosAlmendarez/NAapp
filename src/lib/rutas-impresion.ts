@@ -3,14 +3,15 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { filtroCasillasPorRol, type UsuarioAutenticado } from "@/lib/auth-helpers";
 import { decryptField } from "@/lib/crypto";
+import { rgPorDistritoYCasa } from "@/lib/rg-query";
 
 /**
  * Datos para la vista de impresión / PDF de Rutas (ver
  * src/app/imprimir/rutas). Agrupa igual que el listado principal
  * (`listarCasillasParaRuta`) — por `rutaId`, ordenado por `capturadoEn` —
- * pero trae la información COMPLETA de cada casilla y del RC
- * propietario/suplente de AMBAS casas (26 y 52). La clave de elector se
- * descifra a propósito: este documento la incluye.
+ * pero trae la información COMPLETA de cada casilla, el RG asignado a su
+ * distrito y el RC propietario/suplente de AMBAS casas (26 y 52). La clave
+ * de elector se descifra a propósito: este documento la incluye.
  *
  * Alcance: un RG solo ve sus rutas (mismo `filtroCasillasPorRol` que el
  * resto del módulo); un Admin ve todas, o una sola si se pasa `rutaId`.
@@ -42,6 +43,8 @@ export type CasillaImpresion = {
   coloniaLocalidad: string;
   codigoPostal: string | null;
   ubicacion: string;
+  /** RG (Representante General) asignado al distrito de la casilla, por casa. */
+  rg: { C26: string | null; C52: string | null };
   rc: { C26: RcImpresion; C52: RcImpresion };
 };
 
@@ -109,6 +112,10 @@ export async function listarRutasParaImpresion(
     include: { enlace: true, representantes: true },
   });
 
+  const rgs = await rgPorDistritoYCasa(
+    Array.from(new Set(casillas.map((c) => c.distritoLocal)))
+  );
+
   const grupos = new Map<string, typeof casillas>();
   for (const c of casillas) {
     if (!c.enlace) continue;
@@ -146,6 +153,7 @@ export async function listarRutasParaImpresion(
           coloniaLocalidad: c.coloniaLocalidad,
           codigoPostal: c.codigoPostal,
           ubicacion: c.ubicacion,
+          rg: rgs.get(c.distritoLocal) ?? { C26: null, C52: null },
           rc: {
             C26: rcDeCasa(c.representantes as RepRow[], "C26"),
             C52: rcDeCasa(c.representantes as RepRow[], "C52"),
