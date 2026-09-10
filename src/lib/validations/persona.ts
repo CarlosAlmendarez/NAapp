@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { normalizarTelefonoMx } from "@/lib/utils";
 
-// Clave de elector del INE: 18 caracteres alfanuméricos.
-const CLAVE_ELECTOR_REGEX = /^[A-Z0-9]{18}$/;
+// Clave de elector del INE: alfanumérica, obligatoria, máximo 18 caracteres.
+const CLAVE_ELECTOR_REGEX = /^[A-Z0-9]+$/;
 
 // Todos los datos de personas se guardan en MAYÚSCULAS (los inputs también
 // las fuerzan visualmente, ver components/ui/input.tsx `uppercase`).
@@ -26,7 +26,9 @@ const nombrePersonaSchema = {
     .string()
     .trim()
     .toUpperCase()
-    .regex(CLAVE_ELECTOR_REGEX, "La clave de elector debe tener 18 caracteres alfanuméricos."),
+    .min(1, "La clave de elector es obligatoria.")
+    .max(18, "La clave de elector no puede tener más de 18 caracteres.")
+    .regex(CLAVE_ELECTOR_REGEX, "La clave de elector solo admite letras y números."),
   // Opcional a nivel base; RC y enlace de Rutas lo vuelven obligatorio
   // (ver `correoObligatorio`).
   correoElectronico: z
