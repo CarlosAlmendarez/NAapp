@@ -106,7 +106,13 @@ export async function guardarRutaEnlaces(
       );
     }
 
-    const claveElectorCifrada = encryptField(datos.claveElector);
+    // Alta: la clave de elector es obligatoria (si alguna casilla es nueva
+    // y no viene clave, se rechaza). Edición: si viene vacía, cada casilla
+    // CONSERVA la clave ya guardada — nunca se borra.
+    const claveNuevaCifrada = datos.claveElector ? encryptField(datos.claveElector) : null;
+    if (!claveNuevaCifrada && casillas.some((c) => !c.enlace)) {
+      throw new AccionError("La clave de elector es obligatoria.");
+    }
 
     // El orden dentro de la ruta es el orden en que vienen las casillas
     // (idsUnicos): al editar, primero las que ya estaban (en su orden) y
@@ -122,7 +128,7 @@ export async function guardarRutaEnlaces(
             nombre: datos.nombre,
             apellidoPaterno: datos.apellidoPaterno,
             apellidoMaterno: datos.apellidoMaterno,
-            claveElectorCifrada,
+            claveElectorCifrada: claveNuevaCifrada!,
             telefono: datos.telefono,
             correoElectronico: datos.correoElectronico,
             rutaId: rutaIdFinal,
@@ -134,7 +140,7 @@ export async function guardarRutaEnlaces(
             nombre: datos.nombre,
             apellidoPaterno: datos.apellidoPaterno,
             apellidoMaterno: datos.apellidoMaterno,
-            claveElectorCifrada,
+            claveElectorCifrada: claveNuevaCifrada ?? casilla.enlace!.claveElectorCifrada,
             telefono: datos.telefono,
             correoElectronico: datos.correoElectronico,
             rutaId: rutaIdFinal,

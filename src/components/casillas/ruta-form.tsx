@@ -24,6 +24,7 @@ type PersonaExistente = {
   nombre: string;
   apellidoPaterno: string;
   apellidoMaterno: string | null;
+  claveElector: string;
   telefono: string;
   correoElectronico: string | null;
 };
@@ -58,7 +59,7 @@ export function RutaForm({
   const [nombre, setNombre] = useState(personaExistente?.nombre ?? "");
   const [apellidoPaterno, setApellidoPaterno] = useState(personaExistente?.apellidoPaterno ?? "");
   const [apellidoMaterno, setApellidoMaterno] = useState(personaExistente?.apellidoMaterno ?? "");
-  const [claveElector, setClaveElector] = useState("");
+  const [claveElector, setClaveElector] = useState(personaExistente?.claveElector ?? "");
   const [telefono, setTelefono] = useState(personaExistente?.telefono ?? "");
   const [correoElectronico, setCorreoElectronico] = useState(
     personaExistente?.correoElectronico ?? ""
@@ -210,11 +211,6 @@ export function RutaForm({
               required
               uppercase
             />
-            {personaExistente && (
-              <p className="text-xs text-muted-foreground">
-                Por seguridad, vuelve a capturarla para confirmarla.
-              </p>
-            )}
             <FieldError messages={fieldErrors.claveElector} />
           </div>
           <div className="space-y-1.5">

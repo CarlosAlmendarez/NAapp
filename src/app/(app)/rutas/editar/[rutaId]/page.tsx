@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireCasaActiva } from "@/lib/casa-server";
 import { CASA_LABEL } from "@/lib/casa";
 import { obtenerResumenRcDeCasillas } from "@/lib/rutas-query";
+import { decryptField } from "@/lib/crypto";
 import { RutaForm, type ParadaInicial } from "@/components/casillas/ruta-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -54,6 +55,12 @@ export default async function EditarRutaPage({
   }));
 
   const enlace = enlaces[0]!;
+  let claveElectorEnlace = "";
+  try {
+    claveElectorEnlace = decryptField(enlace.claveElectorCifrada);
+  } catch {
+    claveElectorEnlace = "";
+  }
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -81,6 +88,7 @@ export default async function EditarRutaPage({
               nombre: enlace.nombre,
               apellidoPaterno: enlace.apellidoPaterno,
               apellidoMaterno: enlace.apellidoMaterno,
+              claveElector: claveElectorEnlace,
               telefono: enlace.telefono,
               correoElectronico: enlace.correoElectronico,
             }}

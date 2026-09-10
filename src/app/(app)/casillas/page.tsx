@@ -5,6 +5,7 @@ import { listarCasillas, municipiosDisponibles, distritosDisponibles } from "@/l
 import { requireCasaActiva } from "@/lib/casa-server";
 import { CASA_LABEL } from "@/lib/casa";
 import { CasillasFiltro } from "@/components/casillas/casillas-filtro";
+import { ImprimirCasillasDialog } from "@/components/casillas/imprimir-casillas-dialog";
 import { CasillaCard } from "@/components/casillas/casilla-card";
 import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,11 @@ export default async function CasillasPage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {/* PDF por municipio (o distrito, para admins) — Admin general,
+              Admin de casillas y Capturador; el RG usa el PDF de Rutas. */}
+          {usuario.rol !== "REPRESENTANTE_GENERAL" && (
+            <ImprimirCasillasDialog municipios={municipios} distritos={distritos} />
+          )}
           {/* Exportar el catálogo completo (padrón oficial + RC ya
               capturado) — solo Admin general, ni siquiera Admin de
               casillas ni RG. La clave de elector nunca se incluye. */}

@@ -138,8 +138,11 @@ Every mutation lives in `src/actions/*.ts` (`"use server"`) and follows:
 
 - Clave de elector is encrypted at rest with AES-256-GCM (`src/lib/crypto.ts`,
   key in `FIELD_ENCRYPTION_KEY`). Stored field is `claveElectorCifrada`.
-  On edit, the full clave must be re-entered — the decrypted value is never sent
-  back to the client. Use `maskClaveElector()` for listings.
+  By product decision the edit forms (RC and rutas) now **prefill the decrypted
+  clave** so it can be corrected without retyping/losing it, and the rutas PDF
+  (`/imprimir/rutas`) prints it decrypted. The Server Actions treat an empty
+  `claveElector` on an edit as "keep the stored one" (never blank it); it is only
+  mandatory on create. `maskClaveElector()` is still used for plain listings.
 - Login: `bcryptjs` (12 rounds), constant-time dummy-hash compare for unknown
   emails, generic error for every failure (anti-enumeration), rate limit of
   5 **failed** attempts / 15 min per IP+email (`src/lib/rate-limit.ts`, Upstash

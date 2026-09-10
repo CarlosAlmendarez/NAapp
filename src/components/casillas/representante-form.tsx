@@ -13,6 +13,7 @@ type RepresentanteExistente = {
   nombre: string;
   apellidoPaterno: string;
   apellidoMaterno: string | null;
+  claveElector: string;
   correoElectronico: string | null;
   telefono: string | null;
   propone: string;
@@ -94,12 +95,14 @@ export function RepresentanteForm({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="claveElector">Clave de elector</Label>
-          <Input id="claveElector" name="claveElector" maxLength={18} required uppercase />
-          {existente && (
-            <p className="text-xs text-muted-foreground">
-              Por seguridad, vuelve a capturarla para confirmarla.
-            </p>
-          )}
+          <Input
+            id="claveElector"
+            name="claveElector"
+            maxLength={18}
+            required
+            uppercase
+            defaultValue={existente?.claveElector ?? ""}
+          />
           <FieldError messages={fieldErrors.claveElector} />
         </div>
         <div className="space-y-1.5">
@@ -114,11 +117,12 @@ export function RepresentanteForm({
           <FieldError messages={fieldErrors.correoElectronico} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="telefono">Teléfono (opcional)</Label>
+          <Label htmlFor="telefono">Teléfono</Label>
           <Input
             id="telefono"
             name="telefono"
             telefonoMx
+            required
             defaultValue={existente?.telefono ?? ""}
           />
           <FieldError messages={fieldErrors.telefono} />

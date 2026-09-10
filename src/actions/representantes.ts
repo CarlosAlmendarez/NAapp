@@ -54,7 +54,14 @@ export async function guardarRepresentante(
       }
     }
 
-    const claveElectorCifrada = encryptField(datos.claveElector);
+    // Alta: la clave de elector es obligatoria. Edición: si viene vacía
+    // (no se retecleó), se CONSERVA la ya guardada — nunca se borra.
+    if (!datos.claveElector && !anterior) {
+      throw new AccionError("La clave de elector es obligatoria.");
+    }
+    const claveElectorCifrada = datos.claveElector
+      ? encryptField(datos.claveElector)
+      : anterior!.claveElectorCifrada;
 
     const representante = await prisma.representanteCasilla.upsert({
       where: { casillaId_tipo_casa: { casillaId: casilla.id, tipo: datos.tipo, casa } },

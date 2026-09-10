@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireCasaActiva } from "@/lib/casa-server";
 import { CASA_LABEL } from "@/lib/casa";
 import { obtenerRgDeCasilla } from "@/lib/rg-query";
+import { decryptField } from "@/lib/crypto";
 import { RepresentanteForm } from "@/components/casillas/representante-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -41,6 +42,17 @@ export default async function RepresentantePage({
 
   if (tipo === "SUPLENTE" && rg && !existente) notFound();
 
+  // La clave de elector se muestra descifrada en la edición (es sensible
+  // pero debe verse para poder corregir sin perderla).
+  let claveElectorExistente = "";
+  if (existente) {
+    try {
+      claveElectorExistente = decryptField(existente.claveElectorCifrada);
+    } catch {
+      claveElectorExistente = "";
+    }
+  }
+
   return (
     <Card className="mx-auto max-w-2xl">
       <CardHeader>
@@ -65,6 +77,7 @@ export default async function RepresentantePage({
                   nombre: existente.nombre,
                   apellidoPaterno: existente.apellidoPaterno,
                   apellidoMaterno: existente.apellidoMaterno,
+                  claveElector: claveElectorExistente,
                   correoElectronico: existente.correoElectronico,
                   telefono: existente.telefono,
                   propone: existente.propone,

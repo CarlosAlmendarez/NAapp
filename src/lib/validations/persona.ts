@@ -1,8 +1,11 @@
 import { z } from "zod";
 import { normalizarTelefonoMx } from "@/lib/utils";
 
-// Clave de elector del INE: alfanumérica, obligatoria, máximo 18 caracteres.
-const CLAVE_ELECTOR_REGEX = /^[A-Z0-9]+$/;
+// Clave de elector del INE: alfanumérica, máximo 18 caracteres. A nivel
+// esquema se admite vacío para poder distinguir "no la escribió" en una
+// edición (donde se conserva la ya guardada) de una alta (donde es
+// obligatoria): esa regla vive en las Server Actions de RC y de rutas.
+const CLAVE_ELECTOR_REGEX = /^[A-Z0-9]*$/;
 
 // Todos los datos de personas se guardan en MAYÚSCULAS (los inputs también
 // las fuerzan visualmente, ver components/ui/input.tsx `uppercase`).
@@ -26,7 +29,6 @@ const nombrePersonaSchema = {
     .string()
     .trim()
     .toUpperCase()
-    .min(1, "La clave de elector es obligatoria.")
     .max(18, "La clave de elector no puede tener más de 18 caracteres.")
     .regex(CLAVE_ELECTOR_REGEX, "La clave de elector solo admite letras y números."),
   // Opcional a nivel base; RC y enlace de Rutas lo vuelven obligatorio
@@ -61,9 +63,17 @@ const correoObligatorio = z
   .min(1, "El correo electrónico es obligatorio.")
   .email("Correo inválido.");
 
+// Teléfono obligatorio (número de México, 10 dígitos) — RC y enlace.
+const telefonoObligatorio = z
+  .string()
+  .trim()
+  .transform((v) => normalizarTelefonoMx(v))
+  .refine((v) => v.length === 10, "El teléfono debe tener 10 dígitos (número de México).");
+
 export const representanteSchema = z.object({
   ...nombrePersonaSchema,
   correoElectronico: correoObligatorio,
+  telefono: telefonoObligatorio,
   tipo: z.enum(["PROPIETARIO", "SUPLENTE"]),
   propone: z
     .string()
