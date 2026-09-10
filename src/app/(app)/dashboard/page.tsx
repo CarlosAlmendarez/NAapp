@@ -50,10 +50,11 @@ export default async function DashboardPage() {
         <RutaStatsCards stats={statsRuta!} />
       ) : (
         <>
-          <StatsCards stats={stats!} />
+          {/* Para el Admin general, el resumen de RG / Rutas va primero. */}
           {esAdminGeneral && statsRuta && (
             <RutaStatsCards stats={statsRuta} variante="global" />
           )}
+          <StatsCards stats={stats!} />
         </>
       )}
 
