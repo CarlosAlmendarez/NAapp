@@ -6,6 +6,7 @@ import { Search, ArrowDown, ArrowUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Select,
   SelectTrigger,
@@ -41,7 +42,7 @@ export function EstadisticasControles({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
   const [texto, setTexto] = useState(buscar);
 
   function actualizar(cambios: Record<string, string | undefined>) {
@@ -54,7 +55,19 @@ export function EstadisticasControles({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:flex-wrap sm:items-end">
+    <div
+      className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:flex-wrap sm:items-end"
+      aria-busy={isPending}
+    >
+      {isPending && (
+        <span
+          role="status"
+          className="flex items-center gap-1.5 self-center text-xs text-muted-foreground sm:order-last"
+        >
+          <Spinner className="h-3.5 w-3.5" />
+          Actualizando…
+        </span>
+      )}
       <div className="space-y-1.5">
         <Label className="text-xs">Agrupar por</Label>
         <div className="flex rounded-md border border-border p-0.5">

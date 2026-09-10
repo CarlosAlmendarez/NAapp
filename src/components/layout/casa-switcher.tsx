@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import type { Casa } from "@prisma/client";
 import { seleccionarCasa } from "@/actions/casa";
 import { CASAS, CASA_LABEL, CASA_ESTILO } from "@/lib/casa";
@@ -28,8 +29,12 @@ export function CasaSwitcher({ casaActiva }: { casaActiva: Casa }) {
     <div
       role="group"
       aria-label="Casa en la que estás capturando"
+      aria-busy={isPending}
       className="flex items-center rounded-md border border-border bg-card p-0.5"
     >
+      {isPending && (
+        <Loader2 className="mx-1 h-3.5 w-3.5 animate-spin text-muted-foreground" aria-hidden />
+      )}
       {CASAS.map((casa) => {
         const activa = casa === casaActiva;
         return (

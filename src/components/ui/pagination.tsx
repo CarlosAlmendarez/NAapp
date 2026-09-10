@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { PaginacionEtiqueta } from "@/components/ui/pagination-etiqueta";
 
 export function Pagination({
   page,
@@ -16,7 +17,7 @@ export function Pagination({
     <div className="flex items-center justify-between gap-3">
       <Button asChild variant="outline" size="sm" disabled={page <= 1}>
         <Link href={buildHref(Math.max(1, page - 1))} aria-disabled={page <= 1}>
-          Anterior
+          <PaginacionEtiqueta>Anterior</PaginacionEtiqueta>
         </Link>
       </Button>
       <span className="text-sm text-muted-foreground">
@@ -24,7 +25,7 @@ export function Pagination({
       </span>
       <Button asChild variant="outline" size="sm" disabled={page >= totalPages}>
         <Link href={buildHref(Math.min(totalPages, page + 1))} aria-disabled={page >= totalPages}>
-          Siguiente
+          <PaginacionEtiqueta>Siguiente</PaginacionEtiqueta>
         </Link>
       </Button>
     </div>

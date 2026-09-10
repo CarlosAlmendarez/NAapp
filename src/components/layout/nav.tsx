@@ -2,9 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLinkStatus } from "next/link";
 import type { Rol } from "@prisma/client";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Vote, Users, BarChart3, Map } from "lucide-react";
+import { LayoutDashboard, Vote, Users, BarChart3, Map, Loader2 } from "lucide-react";
+
+/**
+ * Ícono del ítem de menú que se convierte en spinner mientras la
+ * navegación hacia esa ruta está en curso — feedback inmediato al clic
+ * (Next.js `useLinkStatus`, debe usarse dentro de un `<Link>`).
+ */
+function NavIcon({ Icon }: { Icon: typeof LayoutDashboard }) {
+  const { pending } = useLinkStatus();
+  return pending ? (
+    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+  ) : (
+    <Icon className="h-4 w-4" />
+  );
+}
 
 // Orden fijo del menú principal: Inicio primero, Rutas justo después
 // (segunda opción), y Casillas al final — el resto de roles solo ve un
@@ -47,7 +62,6 @@ export function Nav({ rol }: { rol: Rol }) {
       <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4">
         {items.map((item) => {
           const activo = pathname === item.href || pathname.startsWith(item.href + "/");
-          const Icon = item.icon;
           return (
             <Link
               key={item.href}
@@ -59,7 +73,7 @@ export function Nav({ rol }: { rol: Rol }) {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               )}
             >
-              <Icon className="h-4 w-4" />
+              <NavIcon Icon={item.icon} />
               {item.label}
             </Link>
           );

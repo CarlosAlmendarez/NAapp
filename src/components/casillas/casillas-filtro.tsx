@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 import { Search } from "lucide-react";
 
 export function CasillasFiltro({
@@ -18,7 +19,7 @@ export function CasillasFiltro({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
   const [busqueda, setBusqueda] = useState(searchParams.get("busqueda") ?? "");
 
   function actualizar(params: Record<string, string | undefined>) {
@@ -32,7 +33,16 @@ export function CasillasFiltro({
   }
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap" aria-busy={isPending}>
+      {isPending && (
+        <span
+          role="status"
+          className="flex items-center gap-1.5 self-center text-xs text-muted-foreground sm:order-last"
+        >
+          <Spinner className="h-3.5 w-3.5" />
+          Actualizando…
+        </span>
+      )}
       <form
         className="flex min-w-[220px] flex-1 gap-2"
         onSubmit={(e) => {
