@@ -40,8 +40,9 @@ export default async function CasillaDetallePage({
 
   const enlace = casilla.enlace;
   // Cambio 2: a quien captura RC se le muestra quién es el RG de esta
-  // casilla en esta casa. El RC suplente solo se ofrece si NO hay RG.
-  const rg = await obtenerRgDeCasilla(casilla.distritoLocal, casa);
+  // casilla — sin importar la casa (un RG lo es del distrito, no de una
+  // casa en particular). El RC suplente solo se ofrece si NO hay RG.
+  const rg = await obtenerRgDeCasilla(casilla.distritoLocal);
 
   // El Representante General no captura RC, y tampoco ve aquí la sección
   // de Enlace: siempre debe capturar/editar enlaces desde el módulo de
@@ -106,7 +107,7 @@ export default async function CasillaDetallePage({
               <UserCheck className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               <div className="min-w-0 text-sm">
                 <p className="font-medium text-foreground">
-                  Representante General (RG) de esta casilla en {CASA_LABEL[casa]}
+                  Representante General (RG) de esta casilla
                 </p>
                 {rg ? (
                   <p className="text-muted-foreground">
@@ -114,7 +115,7 @@ export default async function CasillaDetallePage({
                   </p>
                 ) : (
                   <p className="text-muted-foreground">
-                    Sin RG asignado en {CASA_LABEL[casa]}. Puedes capturar RC igualmente.
+                    Sin RG asignado. Puedes capturar RC igualmente.
                   </p>
                 )}
               </div>
@@ -139,8 +140,7 @@ export default async function CasillaDetallePage({
           ) : (
             <Card>
               <CardContent className="p-4 text-sm text-muted-foreground">
-                El RC suplente no se captura en {CASA_LABEL[casa]}: esta casilla ya tiene
-                Representante General.
+                El RC suplente no se captura: esta casilla ya tiene Representante General.
               </CardContent>
             </Card>
           )}

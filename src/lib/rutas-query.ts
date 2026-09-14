@@ -121,11 +121,13 @@ export async function obtenerResumenRcDeCasillas(
         apellidoMaterno: true,
       },
     }),
+    // El RG es del distrito, sin importar la casa (ver rg-query.ts):
+    // si el distrito ya tiene RG en cualquiera de las dos casas, la regla
+    // de "sin suplente" y el aviso informativo aplican igual.
     prisma.usuario.findMany({
       where: {
         rol: "REPRESENTANTE_GENERAL",
         activo: true,
-        casa,
         localidades: { some: { tipo: "DISTRITO_LOCAL", valor: { in: distritos } } },
       },
       select: {

@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { filtroCasillasPorRol, type UsuarioAutenticado } from "@/lib/auth-helpers";
 import { decryptField } from "@/lib/crypto";
-import { rgConTelefonoPorDistritoYCasa, type RgDeCasilla } from "@/lib/rg-query";
+import { rgUnicoPorDistrito, type RgDeCasilla } from "@/lib/rg-query";
 
 /**
  * Datos para la vista de impresión / PDF de Rutas (ver
@@ -43,8 +43,12 @@ export type CasillaImpresion = {
   coloniaLocalidad: string;
   codigoPostal: string | null;
   ubicacion: string;
-  /** RG (Representante General) asignado al distrito de la casilla, por casa. */
-  rg: { C26: RgDeCasilla | null; C52: RgDeCasilla | null };
+  /**
+   * RG (Representante General) del distrito de la casilla. Único (no por
+   * casa) — la ruta/enlace no tiene noción de casa, y en la práctica un
+   * mismo RG atiende ambas.
+   */
+  rg: RgDeCasilla | null;
   rc: { C26: RcImpresion; C52: RcImpresion };
 };
 
@@ -116,7 +120,7 @@ export async function listarRutasParaImpresion(
     include: { enlace: true, representantes: true },
   });
 
-  const rgs = await rgConTelefonoPorDistritoYCasa(
+  const rgs = await rgUnicoPorDistrito(
     Array.from(new Set(casillas.map((c) => c.distritoLocal)))
   );
 
@@ -157,7 +161,7 @@ export async function listarRutasParaImpresion(
           coloniaLocalidad: c.coloniaLocalidad,
           codigoPostal: c.codigoPostal,
           ubicacion: c.ubicacion,
-          rg: rgs.get(c.distritoLocal) ?? { C26: null, C52: null },
+          rg: rgs.get(c.distritoLocal) ?? null,
           rc: {
             C26: rcDeCasa(c.representantes as RepRow[], "C26"),
             C52: rcDeCasa(c.representantes as RepRow[], "C52"),

@@ -33,9 +33,10 @@ export default async function RepresentantePage({
     notFound();
   }
 
-  // El RC suplente solo se captura si la casilla no tiene RG en esta casa
-  // (misma regla que en el detalle; la Server Action también la aplica).
-  const rg = await obtenerRgDeCasilla(casilla.distritoLocal, casa);
+  // El RC suplente solo se captura si la casilla no tiene RG — sin
+  // importar la casa (misma regla que en el detalle; la Server Action
+  // también la aplica).
+  const rg = await obtenerRgDeCasilla(casilla.distritoLocal);
 
   const existente = await prisma.representanteCasilla.findUnique({
     where: { casillaId_tipo_casa: { casillaId: id, tipo, casa } },
@@ -66,7 +67,7 @@ export default async function RepresentantePage({
         </CardTitle>
         {rg && (
           <p className="text-sm text-muted-foreground">
-            RG de esta casilla en {CASA_LABEL[casa]}: {rg.nombre}
+            RG de esta casilla: {rg.nombre} · Tel: {rg.telefono ?? "—"}
           </p>
         )}
       </CardHeader>

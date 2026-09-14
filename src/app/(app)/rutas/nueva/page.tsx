@@ -26,7 +26,7 @@ export default async function NuevaRutaPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Nueva ruta — {CASA_LABEL[casa]}</CardTitle>
+          <CardTitle>Nueva ruta</CardTitle>
         </CardHeader>
         <CardContent>
           <RutaForm casaLabel={CASA_LABEL[casa]} />

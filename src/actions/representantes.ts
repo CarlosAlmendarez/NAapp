@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { obtenerCasillaConAccesoOrThrow } from "@/actions/casillas";
 import { requireRole } from "@/lib/auth-helpers";
 import { obtenerCasaActiva } from "@/lib/casa-server";
-import { CASA_LABEL } from "@/lib/casa";
 import { obtenerRgDeCasilla } from "@/lib/rg-query";
 import { representanteSchema } from "@/lib/validations/persona";
 import { encryptField } from "@/lib/crypto";
@@ -41,14 +40,14 @@ export async function guardarRepresentante(
       where: { casillaId_tipo_casa: { casillaId: casilla.id, tipo: datos.tipo, casa } },
     });
 
-    // El RC suplente solo se captura si la casilla NO tiene RG en esta
-    // casa. Si ya había un suplente capturado (p. ej. el RG se asignó
-    // después), se permite corregirlo pero no crear uno nuevo.
+    // El RC suplente solo se captura si la casilla NO tiene RG — sin
+    // importar la casa. Si ya había un suplente capturado (p. ej. el RG se
+    // asignó después), se permite corregirlo pero no crear uno nuevo.
     if (datos.tipo === "SUPLENTE" && !anterior) {
-      const rg = await obtenerRgDeCasilla(casilla.distritoLocal, casa);
+      const rg = await obtenerRgDeCasilla(casilla.distritoLocal);
       if (rg) {
         throw new AccionError(
-          `Esta casilla ya tiene Representante General en ${CASA_LABEL[casa]} (${rg.nombre}); ` +
+          `Esta casilla ya tiene Representante General (${rg.nombre}); ` +
             "el RC suplente solo se captura cuando no hay RG."
         );
       }
