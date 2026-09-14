@@ -261,7 +261,12 @@ export function RepresentanteForm({
           <FieldError id="err-telefono" messages={fieldErrors.telefono} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="propone">
+          {/* min-h en sm+: la etiqueta de "Propone" se parte en dos líneas y
+              sin esto el input de al lado (una sola línea) quedaba más
+              arriba, disparejo. Reserva la misma altura en ambas etiquetas
+              solo cuando están lado a lado (2 columnas); en móvil, donde se
+              apilan en una sola columna, no hace falta. */}
+          <Label htmlFor="propone" className="sm:flex sm:min-h-[2.25rem] sm:items-end">
             ¿Quién propone / recomienda? (partido/coalición) ({casaLabel})
           </Label>
           <Input
@@ -275,7 +280,12 @@ export function RepresentanteForm({
           <FieldError id="err-propone" messages={fieldErrors.propone} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="telefonoPropone">Teléfono de quién propone</Label>
+          <Label
+            htmlFor="telefonoPropone"
+            className="sm:flex sm:min-h-[2.25rem] sm:items-end"
+          >
+            Teléfono de quién propone
+          </Label>
           <Input
             id="telefonoPropone"
             name="telefonoPropone"
