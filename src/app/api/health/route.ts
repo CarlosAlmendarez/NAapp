@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// Ping ligero para monitoreo y para mantener "despierta" la base Neon
-// (se suspende tras inactividad y el primer request luego es lento). Lo
-// invoca el cron de Vercel (ver vercel.json). No expone datos.
+// Ping ligero para monitoreo externo (uptime checks). Sin cron de Vercel
+// (el plan Hobby solo permite crons diarios, insuficiente para mantener
+// despierta la base Neon); el primer request tras inactividad puede ser
+// lento, mitigado por `conReintento` en `db-retry.ts`. No expone datos.
 export const dynamic = "force-dynamic";
 
 export async function GET() {
