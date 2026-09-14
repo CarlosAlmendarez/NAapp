@@ -168,8 +168,13 @@ export default async function ImprimirCasillasPage({
                   <p className="c-row">
                     <b>Ubicación:</b> {c.ubicacion}
                   </p>
+                  {/* El RG (enlace) no depende de la casa — es el mismo dato
+                      de un lado y del otro — pero se repite bajo ambas
+                      etiquetas para que quede claro a qué corresponde cada
+                      bloque de RC, igual que antes. */}
                   <p className="c-row">
-                    <b>RG:</b> <RgTexto rg={c.rg} />
+                    <b>RG Casa 26:</b> <RgTexto rg={c.rg} /> · <b>RG Casa 52:</b>{" "}
+                    <RgTexto rg={c.rg} />
                   </p>
                   <div className="rc-grid">
                     <RcCasa titulo="RC Casa 26" rc={c.rc.C26} />
