@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { Prisma, type Casa } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { CASA_NUMERO } from "@/lib/casa";
+import { decryptField } from "@/lib/crypto";
 import { rgConCorreoPorDistritoYCasa } from "@/lib/rg-query";
 
 /**
@@ -14,14 +15,20 @@ import { rgConCorreoPorDistritoYCasa } from "@/lib/rg-query";
  * mismo layout para sembrar la base de datos — este exportador es su
  * inverso.
  *
- * La "Clave de Elector" SIEMPRE se exporta en blanco a propósito: es un
- * identificador oficial del INE cifrado en reposo (AES-256-GCM, ver
- * src/lib/crypto.ts) precisamente para nunca exponerse fuera del momento
- * de captura — bajarla en un archivo descargable rompería esa protección.
- * La columna se deja presente (no se quita) solo para conservar el mismo
- * formato/orden de columnas que el padrón oficial.
+ * La "Clave de Elector" se descifra al exportar (AES-256-GCM, ver
+ * src/lib/crypto.ts) — igual que ya se hace en los PDFs de impresión — para
+ * que el archivo quede completo para quien tiene permiso de exportarlo.
  */
 const NOMBRE_HOJA = "sabana.";
+
+function safeDecrypt(cifrado: string | null | undefined): string {
+  if (!cifrado) return "";
+  try {
+    return decryptField(cifrado);
+  } catch {
+    return "";
+  }
+}
 
 // Los datos de RC/enlace son por casa (26 / 52): cada exportación trae los
 // de UNA casa (la activa) y agrega "CASA" como última columna para dejarlo
@@ -79,6 +86,7 @@ type RepresentanteParaExportar = {
   nombre: string;
   apellidoPaterno: string;
   apellidoMaterno: string | null;
+  claveElectorCifrada: string;
   correoElectronico: string | null;
   telefono: string | null;
   propone: string;
@@ -90,7 +98,7 @@ function filaRepresentante(r: RepresentanteParaExportar): (string | number)[] {
     r?.nombre ?? "",
     r?.apellidoPaterno ?? "",
     r?.apellidoMaterno ?? "",
-    "", // Clave de Elector: nunca se exporta — ver comentario arriba.
+    safeDecrypt(r?.claveElectorCifrada),
     r?.correoElectronico ?? "",
     r?.telefono ?? "",
     r?.propone ?? "",

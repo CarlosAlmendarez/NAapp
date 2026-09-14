@@ -12,7 +12,11 @@
  *
  * Es seguro volver a correrlo: si un rgdistrito{N}@ ya existe, no se le
  * cambia la contraseña ni se duplica su asignación de distrito. La
- * desactivación de rg@nuevaalianzaslp.org también es idempotente.
+ * desactivación de rg@nuevaalianzaslp.org también es idempotente. Cada
+ * cuenta se crea/asegura con `casa: "C26"` — este script es anterior a la
+ * función de "Casa" (26/52) y por eso las 16 cuentas originales quedaron
+ * sin casa asignada (invisibles para obtenerRgDeCasilla y compañía); volver
+ * a correrlo hoy también backfillea esa casa en las que ya existían.
  */
 import { PrismaClient, Rol } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -79,6 +83,9 @@ async function main() {
           data: { usuarioId: existente.id, tipo: "DISTRITO_LOCAL", valor: distrito },
         });
       }
+      if (!existente.casa) {
+        await prisma.usuario.update({ where: { id: existente.id }, data: { casa: "C26" } });
+      }
       credenciales.push({ correo, distrito, password: "(ya existía, sin cambios)", nuevo: false });
       continue;
     }
@@ -93,6 +100,7 @@ async function main() {
         passwordHash,
         rol: Rol.REPRESENTANTE_GENERAL,
         activo: true,
+        casa: "C26",
         localidades: { create: [{ tipo: "DISTRITO_LOCAL", valor: distrito }] },
       },
     });
