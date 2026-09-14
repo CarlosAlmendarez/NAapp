@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, ChevronRight } from "lucide-react";
+import { MapPin, ChevronRight, UserCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatTipoCasilla, varianteTipoCasilla } from "@/lib/tipo-casilla";
@@ -13,6 +13,7 @@ type CasillaResumen = {
   coloniaLocalidad: string;
   ubicacion: string;
   representantes: { tipo: "PROPIETARIO" | "SUPLENTE" }[];
+  rg: { nombre: string; telefono: string | null } | null;
 };
 
 export function CasillaCard({ casilla }: { casilla: CasillaResumen }) {
@@ -39,6 +40,12 @@ export function CasillaCard({ casilla }: { casilla: CasillaResumen }) {
               {casilla.municipio} · {casilla.coloniaLocalidad}
             </p>
             <p className="mt-1 truncate text-xs text-muted-foreground">{casilla.ubicacion}</p>
+            {casilla.rg && (
+              <p className="mt-1 flex items-center gap-1 truncate text-xs text-muted-foreground">
+                <UserCheck className="h-3.5 w-3.5 shrink-0" />
+                RG: {casilla.rg.nombre} · Tel: {casilla.rg.telefono ?? "—"}
+              </p>
+            )}
             <div className="mt-2 flex flex-wrap gap-1.5">
               <Badge variant={tienePropietario ? "success" : "outline"}>
                 RC propietario {tienePropietario ? "✓" : "pendiente"}

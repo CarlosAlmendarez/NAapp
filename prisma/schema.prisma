@@ -91,6 +91,12 @@ model Usuario {
   rol          Rol
   activo       Boolean  @default(true)
 
+  // Teléfono de contacto. Se exige (a nivel de Zod) solo para
+  // REPRESENTANTE_GENERAL: es lo que se muestra junto a su nombre en el
+  // detalle/lista de casillas y en las impresiones/exportaciones — nunca su
+  // correo, que ahí no le sirve a quien está en campo.
+  telefono     String?
+
   // Solo se usa (y se exige) cuando rol = REPRESENTANTE_GENERAL: indica de
   // qué casa es RG. La unicidad "un RG por distrito local" pasa a ser "un
   // RG por distrito local POR casa" (ver actions/usuarios.ts). No acota lo

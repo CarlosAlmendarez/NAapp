@@ -37,6 +37,7 @@ export default async function EditarUsuarioPage({
               id: usuarioObjetivo.id,
               nombre: usuarioObjetivo.nombre,
               correo: usuarioObjetivo.correo,
+              telefono: usuarioObjetivo.telefono,
               rol: usuarioObjetivo.rol,
               activo: usuarioObjetivo.activo,
               casa: usuarioObjetivo.casa,

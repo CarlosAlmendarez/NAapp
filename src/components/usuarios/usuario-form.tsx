@@ -26,6 +26,7 @@ type UsuarioExistente = {
   id: string;
   nombre: string;
   correo: string;
+  telefono: string | null;
   rol: Rol;
   activo: boolean;
   casa: Casa | null;
@@ -62,6 +63,7 @@ export function UsuarioForm({
             id: usuario.id,
             nombre: formData.get("nombre"),
             correo: formData.get("correo"),
+            telefono: formData.get("telefono"),
             rol,
             activo,
             casa: casaEnviada,
@@ -70,6 +72,7 @@ export function UsuarioForm({
         : await crearUsuario({
             nombre: formData.get("nombre"),
             correo: formData.get("correo"),
+            telefono: formData.get("telefono"),
             password: formData.get("password"),
             rol,
             casa: casaEnviada,
@@ -101,6 +104,26 @@ export function UsuarioForm({
         <Label htmlFor="correo">Correo</Label>
         <Input id="correo" name="correo" type="email" defaultValue={usuario?.correo} required />
         <FieldError messages={fieldErrors.correo} />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="telefono">
+          Teléfono{rol === "REPRESENTANTE_GENERAL" ? "" : " (opcional)"}
+        </Label>
+        <Input
+          id="telefono"
+          name="telefono"
+          telefonoMx
+          required={rol === "REPRESENTANTE_GENERAL"}
+          defaultValue={usuario?.telefono ?? ""}
+        />
+        {rol === "REPRESENTANTE_GENERAL" && (
+          <p className="text-xs text-muted-foreground">
+            Es lo único que se muestra de contacto junto a su nombre en casillas,
+            impresiones y exportaciones — nunca su correo.
+          </p>
+        )}
+        <FieldError messages={fieldErrors.telefono} />
       </div>
 
       {!usuario && (

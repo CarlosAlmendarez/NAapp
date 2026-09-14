@@ -110,7 +110,7 @@ export default async function CasillaDetallePage({
                 </p>
                 {rg ? (
                   <p className="text-muted-foreground">
-                    {rg.nombre} · {rg.correo}
+                    {rg.nombre} · Tel: {rg.telefono ?? "—"}
                   </p>
                 ) : (
                   <p className="text-muted-foreground">

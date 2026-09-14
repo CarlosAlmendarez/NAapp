@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { filtroCasillasPorRol, type UsuarioAutenticado } from "@/lib/auth-helpers";
 import { decryptField } from "@/lib/crypto";
-import { rgPorDistritoYCasa } from "@/lib/rg-query";
+import { rgConTelefonoPorDistritoYCasa, type RgDeCasilla } from "@/lib/rg-query";
 
 /**
  * Datos para la vista de impresión / PDF de Rutas (ver
@@ -44,7 +44,7 @@ export type CasillaImpresion = {
   codigoPostal: string | null;
   ubicacion: string;
   /** RG (Representante General) asignado al distrito de la casilla, por casa. */
-  rg: { C26: string | null; C52: string | null };
+  rg: { C26: RgDeCasilla | null; C52: RgDeCasilla | null };
   rc: { C26: RcImpresion; C52: RcImpresion };
 };
 
@@ -116,7 +116,7 @@ export async function listarRutasParaImpresion(
     include: { enlace: true, representantes: true },
   });
 
-  const rgs = await rgPorDistritoYCasa(
+  const rgs = await rgConTelefonoPorDistritoYCasa(
     Array.from(new Set(casillas.map((c) => c.distritoLocal)))
   );
 

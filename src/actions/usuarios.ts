@@ -77,6 +77,7 @@ export async function crearUsuario(formData: unknown): Promise<ActionResult<{ id
       data: {
         nombre: datos.nombre,
         correo: datos.correo,
+        telefono: datos.telefono ?? null,
         passwordHash,
         rol: datos.rol,
         casa,
@@ -132,6 +133,7 @@ export async function actualizarUsuario(formData: unknown): Promise<ActionResult
         data: {
           nombre: datos.nombre,
           correo: datos.correo,
+          telefono: datos.telefono ?? null,
           rol: datos.rol,
           activo: datos.activo,
           casa,

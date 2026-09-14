@@ -6,6 +6,7 @@ import {
   sinRestriccionGeografica,
   type UsuarioAutenticado,
 } from "@/lib/auth-helpers";
+import { rgConTelefonoPorDistritoYCasa } from "@/lib/rg-query";
 
 const PAGE_SIZE = 20;
 
@@ -51,7 +52,7 @@ export async function listarCasillas(
 
   const where: Prisma.CasillaWhereInput = { AND: and };
 
-  const [total, casillas] = await Promise.all([
+  const [total, casillasSinRg] = await Promise.all([
     prisma.casilla.count({ where }),
     prisma.casilla.findMany({
       where,
@@ -64,6 +65,15 @@ export async function listarCasillas(
       },
     }),
   ]);
+
+  // RG (Representante General) de esta casa, para mostrar en la tarjeta de
+  // cada casilla — igual que en su detalle: solo nombre y teléfono.
+  const distritos = Array.from(new Set(casillasSinRg.map((c) => c.distritoLocal)));
+  const rgs = await rgConTelefonoPorDistritoYCasa(distritos);
+  const casillas = casillasSinRg.map((c) => ({
+    ...c,
+    rg: rgs.get(c.distritoLocal)?.[casa] ?? null,
+  }));
 
   return {
     casillas,

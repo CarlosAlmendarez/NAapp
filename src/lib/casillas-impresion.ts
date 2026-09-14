@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { filtroCasillasPorRol, type UsuarioAutenticado } from "@/lib/auth-helpers";
 import { decryptField } from "@/lib/crypto";
-import { rgPorDistritoYCasa } from "@/lib/rg-query";
+import { rgConTelefonoPorDistritoYCasa, type RgDeCasilla } from "@/lib/rg-query";
 import type { PersonaImpresion, RcImpresion } from "@/lib/rutas-impresion";
 
 /**
@@ -26,7 +26,7 @@ export type CasillaImpresionCatalogo = {
   coloniaLocalidad: string;
   codigoPostal: string | null;
   ubicacion: string;
-  rg: { C26: string | null; C52: string | null };
+  rg: { C26: RgDeCasilla | null; C52: RgDeCasilla | null };
   rc: { C26: RcImpresion; C52: RcImpresion };
 };
 
@@ -91,7 +91,7 @@ export async function listarCasillasParaImpresion(
   });
 
   const distritos = Array.from(new Set(casillas.map((c) => c.distritoLocal)));
-  const rgs = await rgPorDistritoYCasa(distritos);
+  const rgs = await rgConTelefonoPorDistritoYCasa(distritos);
 
   return casillas.map((c) => ({
     id: c.id,

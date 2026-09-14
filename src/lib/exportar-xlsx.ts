@@ -4,7 +4,7 @@ import { Prisma, type Casa } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { CASA_NUMERO } from "@/lib/casa";
 import { decryptField } from "@/lib/crypto";
-import { rgConCorreoPorDistritoYCasa } from "@/lib/rg-query";
+import { rgConTelefonoPorDistritoYCasa } from "@/lib/rg-query";
 
 /**
  * Recrea el formato exacto del padrón oficial ("SECCIONES Y CASILLAS
@@ -77,7 +77,7 @@ const FIN_BASE = ENCABEZADO_COLUMNAS_BASE.length; // 26
 const ENCABEZADO_COLUMNAS = [
   ...ENCABEZADO_COLUMNAS_BASE,
   "RG - Nombre",
-  "RG - Correo",
+  "RG - Teléfono",
   "CASA",
 ] as const;
 const COL_RG = FIN_BASE;
@@ -167,7 +167,7 @@ export async function construirLibroCasillas(
   });
 
   const distritos = Array.from(new Set(casillas.map((c) => c.distritoLocal)));
-  const rgs = await rgConCorreoPorDistritoYCasa(distritos);
+  const rgs = await rgConTelefonoPorDistritoYCasa(distritos);
 
   const numeroCasa = CASA_NUMERO[casa];
   const filas = casillas.map((c) => {
@@ -179,7 +179,7 @@ export async function construirLibroCasillas(
       ...filaRepresentante(propietario),
       ...filaRepresentante(suplente),
       rg?.nombre ?? "Sin RG asignado",
-      rg?.correo ?? "",
+      rg?.telefono ?? "",
       numeroCasa,
     ];
   });
