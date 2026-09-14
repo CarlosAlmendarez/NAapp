@@ -55,8 +55,12 @@ export default async function RutasPage({
               Imprimir PDF
             </a>
           </Button>
-          {/* XLSX: solo Admin general (la clave de elector nunca se incluye). */}
-          {usuario.rol === "ADMIN_GENERAL" && (
+          {/* XLSX: Admin general y RG (la clave de elector nunca se
+              incluye). El Admin general exporta el catálogo completo; el RG
+              exporta solo lo que le corresponde (su alcance geográfico,
+              nunca el catálogo completo) — ver el filtro aplicado en la
+              propia Server Route. */}
+          {(usuario.rol === "ADMIN_GENERAL" || usuario.rol === "REPRESENTANTE_GENERAL") && (
             <Button asChild variant="outline">
               <a href="/api/exportar/rutas">
                 <Download className="h-4 w-4" />

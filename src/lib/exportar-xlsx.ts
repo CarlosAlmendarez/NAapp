@@ -203,18 +203,25 @@ const ENCABEZADO_COLUMNAS_RUTA = [
 const COL_RUTA = FIN_BASE;
 
 /**
- * Exportación 2 — "Rutas": el mismo catálogo, pero con columnas extra al
- * final identificando a qué ruta (y en qué posición dentro de ella)
- * pertenece cada casilla capturada — y las filas reordenadas para que las
- * casillas de una misma ruta queden pegadas unas con otras (en vez del
- * orden municipio/sección de siempre), así se distinguen las rutas de un
- * vistazo. Las casillas sin enlace capturado quedan al final, con esas
- * columnas en blanco, en el orden normal del catálogo.
+ * Exportación 2 — "Rutas": el mismo catálogo (completo para Admin general;
+ * acotado al alcance de quien exporta si se pasa `filtro` — ver
+ * `filtroCasillasPorRol`, así el RG solo obtiene su(s) propio(s)
+ * distrito(s)), pero con columnas extra al final identificando a qué ruta
+ * (y en qué posición dentro de ella) pertenece cada casilla capturada — y
+ * las filas reordenadas para que las casillas de una misma ruta queden
+ * pegadas unas con otras (en vez del orden municipio/sección de siempre),
+ * así se distinguen las rutas de un vistazo. Las casillas sin enlace
+ * capturado quedan al final, con esas columnas en blanco, en el orden
+ * normal del catálogo.
  */
-export async function construirLibroRutas(casa: Casa): Promise<Buffer> {
+export async function construirLibroRutas(
+  casa: Casa,
+  filtro: Prisma.CasillaWhereInput = {}
+): Promise<Buffer> {
   // El RC es por casa (se filtra); el enlace de Rutas es único por casilla
   // (no por casa).
   const casillas = await prisma.casilla.findMany({
+    where: filtro,
     orderBy: [{ municipio: "asc" }, { seccion: "asc" }, { tipoCasilla: "asc" }],
     include: { representantes: { where: { casa } }, enlace: true },
   });
