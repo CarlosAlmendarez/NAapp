@@ -1,8 +1,9 @@
 import "server-only";
 import * as XLSX from "xlsx";
-import type { Casa } from "@prisma/client";
+import { Prisma, type Casa } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { CASA_NUMERO } from "@/lib/casa";
+import { rgConCorreoPorDistritoYCasa } from "@/lib/rg-query";
 
 /**
  * Recrea el formato exacto del padrón oficial ("SECCIONES Y CASILLAS
@@ -25,7 +26,9 @@ const NOMBRE_HOJA = "sabana.";
 // Los datos de RC/enlace son por casa (26 / 52): cada exportación trae los
 // de UNA casa (la activa) y agrega "CASA" como última columna para dejarlo
 // explícito. El orden del resto de columnas se conserva igual que el
-// padrón oficial (por eso "CASA" va al final y no al frente).
+// padrón oficial (por eso "CASA" va al final y no al frente). Cada bloque
+// de representante (propietario/suplente) trae también el teléfono de
+// quien lo propone, junto a "Propone" — igual que en la captura.
 const ENCABEZADO_COLUMNAS_BASE = [
   "DISTRITO FEDERAL",
   "DISTRITO LOCAL",
@@ -44,6 +47,7 @@ const ENCABEZADO_COLUMNAS_BASE = [
   "Correo Electrónico",
   "Teléfono",
   "Propone",
+  "Teléfono de quien propone",
   "Nombre",
   "Apellido Paterno",
   "Apellido Materno",
@@ -51,9 +55,25 @@ const ENCABEZADO_COLUMNAS_BASE = [
   "Correo Electrónico",
   "Teléfono",
   "Propone",
+  "Teléfono de quien propone",
 ] as const;
 
-const ENCABEZADO_COLUMNAS = [...ENCABEZADO_COLUMNAS_BASE, "CASA"] as const;
+// Columna de inicio de cada bloque dentro de ENCABEZADO_COLUMNAS_BASE
+// (10 columnas de casilla, luego 8 de propietario, luego 8 de suplente).
+const COL_PROPIETARIO = 10;
+const COL_SUPLENTE = 18;
+const FIN_BASE = ENCABEZADO_COLUMNAS_BASE.length; // 26
+
+// Exportación 1 — "Casillas": además del RC, muestra el RG (Representante
+// General) de la casa activa, tal cual aparece en la vista normal de una
+// casilla — "Sin RG asignado" cuando no tiene.
+const ENCABEZADO_COLUMNAS = [
+  ...ENCABEZADO_COLUMNAS_BASE,
+  "RG - Nombre",
+  "RG - Correo",
+  "CASA",
+] as const;
+const COL_RG = FIN_BASE;
 
 type RepresentanteParaExportar = {
   nombre: string;
@@ -62,6 +82,7 @@ type RepresentanteParaExportar = {
   correoElectronico: string | null;
   telefono: string | null;
   propone: string;
+  telefonoPropone: string | null;
 } | null;
 
 function filaRepresentante(r: RepresentanteParaExportar): (string | number)[] {
@@ -73,6 +94,7 @@ function filaRepresentante(r: RepresentanteParaExportar): (string | number)[] {
     r?.correoElectronico ?? "",
     r?.telefono ?? "",
     r?.propone ?? "",
+    r?.telefonoPropone ?? "",
   ];
 }
 
@@ -120,35 +142,49 @@ function construirLibro(
 }
 
 /**
- * Exportación 1 — "Casillas": el catálogo completo, mismo formato que el
- * padrón oficial, con el RC propietario/suplente ya capturado en la app
- * (si existe) rellenando esas columnas.
+ * Exportación 1 — "Casillas": el catálogo (completo para Admin general;
+ * acotado al alcance de quien exporta si se pasa `filtro` — ver
+ * `filtroCasillasPorRol`) en el mismo formato que el padrón oficial, con
+ * el RC propietario/suplente y el RG ya capturados en la app rellenando
+ * esas columnas.
  */
-export async function construirLibroCasillas(casa: Casa): Promise<Buffer> {
+export async function construirLibroCasillas(
+  casa: Casa,
+  filtro: Prisma.CasillaWhereInput = {}
+): Promise<Buffer> {
   const casillas = await prisma.casilla.findMany({
+    where: filtro,
     orderBy: [{ municipio: "asc" }, { seccion: "asc" }, { tipoCasilla: "asc" }],
     include: { representantes: { where: { casa } } },
   });
+
+  const distritos = Array.from(new Set(casillas.map((c) => c.distritoLocal)));
+  const rgs = await rgConCorreoPorDistritoYCasa(distritos);
 
   const numeroCasa = CASA_NUMERO[casa];
   const filas = casillas.map((c) => {
     const propietario = c.representantes.find((r) => r.tipo === "PROPIETARIO") ?? null;
     const suplente = c.representantes.find((r) => r.tipo === "SUPLENTE") ?? null;
+    const rg = rgs.get(c.distritoLocal)?.[casa] ?? null;
     return [
       ...filaCasillaBase(c),
       ...filaRepresentante(propietario),
       ...filaRepresentante(suplente),
+      rg?.nombre ?? "Sin RG asignado",
+      rg?.correo ?? "",
       numeroCasa,
     ];
   });
 
   const superEncabezado = new Array(ENCABEZADO_COLUMNAS.length).fill("");
-  superEncabezado[10] = "PROPIETARIO";
-  superEncabezado[17] = "SUPLENTE";
+  superEncabezado[COL_PROPIETARIO] = "PROPIETARIO";
+  superEncabezado[COL_SUPLENTE] = "SUPLENTE";
+  superEncabezado[COL_RG] = "REPRESENTANTE GENERAL (RG)";
 
   return construirLibro(superEncabezado, ENCABEZADO_COLUMNAS, filas, [
-    { s: { r: 0, c: 10 }, e: { r: 0, c: 16 } },
-    { s: { r: 0, c: 17 }, e: { r: 0, c: 23 } },
+    { s: { r: 0, c: COL_PROPIETARIO }, e: { r: 0, c: COL_SUPLENTE - 1 } },
+    { s: { r: 0, c: COL_SUPLENTE }, e: { r: 0, c: FIN_BASE - 1 } },
+    { s: { r: 0, c: COL_RG }, e: { r: 0, c: COL_RG + 1 } },
   ]);
 }
 
@@ -164,6 +200,7 @@ const ENCABEZADO_COLUMNAS_RUTA = [
   "Capturado el",
   "CASA",
 ] as const;
+const COL_RUTA = FIN_BASE;
 
 /**
  * Exportación 2 — "Rutas": el mismo catálogo, pero con columnas extra al
@@ -254,18 +291,18 @@ export async function construirLibroRutas(casa: Casa): Promise<Buffer> {
   });
 
   const superEncabezado = new Array(ENCABEZADO_COLUMNAS_RUTA.length).fill("");
-  superEncabezado[10] = "PROPIETARIO";
-  superEncabezado[17] = "SUPLENTE";
-  superEncabezado[24] = "RUTA (MÓDULO RUTAS)";
+  superEncabezado[COL_PROPIETARIO] = "PROPIETARIO";
+  superEncabezado[COL_SUPLENTE] = "SUPLENTE";
+  superEncabezado[COL_RUTA] = "RUTA (MÓDULO RUTAS)";
 
   return construirLibro(
     superEncabezado,
     ENCABEZADO_COLUMNAS_RUTA,
     [...filasCapturadas, ...filasPendientes],
     [
-      { s: { r: 0, c: 10 }, e: { r: 0, c: 16 } },
-      { s: { r: 0, c: 17 }, e: { r: 0, c: 23 } },
-      { s: { r: 0, c: 24 }, e: { r: 0, c: 31 } },
+      { s: { r: 0, c: COL_PROPIETARIO }, e: { r: 0, c: COL_SUPLENTE - 1 } },
+      { s: { r: 0, c: COL_SUPLENTE }, e: { r: 0, c: FIN_BASE - 1 } },
+      { s: { r: 0, c: COL_RUTA }, e: { r: 0, c: COL_RUTA + 7 } },
     ]
   );
 }

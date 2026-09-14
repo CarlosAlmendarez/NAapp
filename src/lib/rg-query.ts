@@ -35,14 +35,15 @@ export async function obtenerRgDeCasilla(
 }
 
 /**
- * Nombre del RG (Representante General) por distrito local y por casa,
- * en bloque — para las vistas de impresión (rutas y casillas), que
- * necesitan el RG de muchas casillas a la vez sin hacer N+1.
+ * RG (Representante General) por distrito local y por casa, con nombre Y
+ * correo, en bloque — para la exportación XLSX de Casillas, que muestra
+ * la misma información que la vista normal de una casilla ("RG de esta
+ * casilla en Casa NN: nombre · correo").
  */
-export async function rgPorDistritoYCasa(
+export async function rgConCorreoPorDistritoYCasa(
   distritos: string[]
-): Promise<Map<string, { C26: string | null; C52: string | null }>> {
-  const mapa = new Map<string, { C26: string | null; C52: string | null }>();
+): Promise<Map<string, { C26: RgDeCasilla | null; C52: RgDeCasilla | null }>> {
+  const mapa = new Map<string, { C26: RgDeCasilla | null; C52: RgDeCasilla | null }>();
   for (const d of distritos) mapa.set(d, { C26: null, C52: null });
   if (distritos.length === 0) return mapa;
 
@@ -55,6 +56,7 @@ export async function rgPorDistritoYCasa(
     },
     select: {
       nombre: true,
+      correo: true,
       casa: true,
       localidades: { where: { tipo: "DISTRITO_LOCAL" }, select: { valor: true } },
     },
@@ -63,8 +65,25 @@ export async function rgPorDistritoYCasa(
   for (const rg of rgs) {
     for (const l of rg.localidades) {
       const entry = mapa.get(l.valor);
-      if (entry && rg.casa) entry[rg.casa] = rg.nombre;
+      if (entry && rg.casa) entry[rg.casa] = { nombre: rg.nombre, correo: rg.correo };
     }
+  }
+  return mapa;
+}
+
+/**
+ * Solo el nombre del RG por distrito local y por casa, en bloque — para
+ * las vistas de impresión (rutas y casillas), que necesitan el RG de
+ * muchas casillas a la vez sin hacer N+1. Construido sobre
+ * `rgConCorreoPorDistritoYCasa` para no repetir la consulta.
+ */
+export async function rgPorDistritoYCasa(
+  distritos: string[]
+): Promise<Map<string, { C26: string | null; C52: string | null }>> {
+  const detallado = await rgConCorreoPorDistritoYCasa(distritos);
+  const mapa = new Map<string, { C26: string | null; C52: string | null }>();
+  for (const [distrito, { C26, C52 }] of detallado) {
+    mapa.set(distrito, { C26: C26?.nombre ?? null, C52: C52?.nombre ?? null });
   }
   return mapa;
 }

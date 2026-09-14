@@ -49,9 +49,12 @@ type RepRow = {
   telefono: string | null;
   correoElectronico: string | null;
   propone: string;
+  telefonoPropone: string | null;
 };
 
-function personaDeRep(r: RepRow): PersonaImpresion & { propone: string } {
+function personaDeRep(
+  r: RepRow
+): PersonaImpresion & { propone: string; telefonoPropone: string | null } {
   return {
     nombre: r.nombre,
     apellidoPaterno: r.apellidoPaterno,
@@ -60,6 +63,7 @@ function personaDeRep(r: RepRow): PersonaImpresion & { propone: string } {
     telefono: r.telefono,
     correoElectronico: r.correoElectronico,
     propone: r.propone,
+    telefonoPropone: r.telefonoPropone,
   };
 }
 

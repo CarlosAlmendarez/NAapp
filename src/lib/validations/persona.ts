@@ -81,6 +81,8 @@ export const representanteSchema = z.object({
     .toUpperCase()
     .min(1, "Indica qué partido/coalición propone al RC.")
     .max(150),
+  // Teléfono de contacto de quien propone/recomienda al RC.
+  telefonoPropone: telefonoObligatorio,
 });
 
 export type RepresentanteInput = z.infer<typeof representanteSchema>;

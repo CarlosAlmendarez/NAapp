@@ -1,22 +1,26 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { obtenerUsuarioValidoOrNull } from "@/lib/auth-helpers";
+import { obtenerUsuarioValidoOrNull, filtroCasillasPorRol } from "@/lib/auth-helpers";
 import { obtenerCasaActiva } from "@/lib/casa-server";
 import { CASA_NUMERO } from "@/lib/casa";
 import { construirLibroCasillas } from "@/lib/exportar-xlsx";
 import { registrarAuditoria } from "@/lib/audit";
 
+const ROLES_EXPORTAN_CASILLAS = ["ADMIN_GENERAL", "CAPTURADOR"] as const;
+
 /**
- * Exportación 1: el catálogo completo de casillas en el mismo formato que
- * el padrón oficial ("SECCIONES Y CASILLAS 2024.xlsx"). Solo Admin
- * general — ni RG ni ningún otro rol, ni siquiera Admin de casillas (ver
- * el botón en la página, gateado igual).
+ * Exportación 1: casillas en el mismo formato que el padrón oficial
+ * ("SECCIONES Y CASILLAS 2024.xlsx"), con RC y RG ya capturados. Admin
+ * general exporta el catálogo completo; Capturador exporta SOLO lo que le
+ * corresponde (`filtroCasillasPorRol`, igual que el resto de la app) —
+ * nunca el catálogo completo. Ni RG ni Admin de casillas lo ven (ver el
+ * botón en la página, gateado igual).
  */
 export async function GET(request: NextRequest) {
   const usuario = await obtenerUsuarioValidoOrNull();
   if (!usuario) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
-  if (usuario.rol !== "ADMIN_GENERAL") {
+  if (!ROLES_EXPORTAN_CASILLAS.includes(usuario.rol as (typeof ROLES_EXPORTAN_CASILLAS)[number])) {
     return new NextResponse("No tienes permiso para exportar este archivo.", { status: 403 });
   }
 
@@ -25,7 +29,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse("Elige una casa (26 o 52) antes de exportar.", { status: 400 });
   }
 
-  const buffer = await construirLibroCasillas(casa);
+  const buffer = await construirLibroCasillas(casa, filtroCasillasPorRol(usuario));
 
   await registrarAuditoria({
     usuarioId: usuario.id,

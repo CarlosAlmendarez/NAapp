@@ -76,6 +76,7 @@ export async function guardarRepresentante(
         correoElectronico: datos.correoElectronico,
         telefono: datos.telefono,
         propone: datos.propone,
+        telefonoPropone: datos.telefonoPropone,
         capturadoPorId: usuario.id,
         updatedById: usuario.id,
       },
@@ -87,6 +88,7 @@ export async function guardarRepresentante(
         correoElectronico: datos.correoElectronico,
         telefono: datos.telefono,
         propone: datos.propone,
+        telefonoPropone: datos.telefonoPropone,
         updatedById: usuario.id,
       },
     });

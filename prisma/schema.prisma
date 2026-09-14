@@ -209,6 +209,10 @@ model RepresentanteCasilla {
   correoElectronico  String?
   telefono           String?
   propone            String
+  // Teléfono de quien propone/recomienda al RC. Nullable en columna (las
+  // capturas previas a este campo no lo tienen); obligatorio a nivel de
+  // captura — ver `representanteSchema`.
+  telefonoPropone    String?
 
   capturadoPorId String?
   capturadoPor   Usuario?  @relation("RepresentanteCapturadoPor", fields: [capturadoPorId], references: [id])

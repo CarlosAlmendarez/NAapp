@@ -87,6 +87,7 @@ export default async function RepresentantePage({
                   correoElectronico: existente.correoElectronico,
                   telefono: existente.telefono,
                   propone: existente.propone,
+                  telefonoPropone: existente.telefonoPropone,
                 }
               : undefined
           }

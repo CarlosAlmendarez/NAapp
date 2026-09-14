@@ -27,8 +27,8 @@ export type PersonaImpresion = {
 };
 
 export type RcImpresion = {
-  propietario: (PersonaImpresion & { propone: string }) | null;
-  suplente: (PersonaImpresion & { propone: string }) | null;
+  propietario: (PersonaImpresion & { propone: string; telefonoPropone: string | null }) | null;
+  suplente: (PersonaImpresion & { propone: string; telefonoPropone: string | null }) | null;
 };
 
 export type CasillaImpresion = {
@@ -74,9 +74,12 @@ type RepRow = {
   telefono: string | null;
   correoElectronico: string | null;
   propone: string;
+  telefonoPropone: string | null;
 };
 
-function personaDeRep(r: RepRow): PersonaImpresion & { propone: string } {
+function personaDeRep(
+  r: RepRow
+): PersonaImpresion & { propone: string; telefonoPropone: string | null } {
   return {
     nombre: r.nombre,
     apellidoPaterno: r.apellidoPaterno,
@@ -85,6 +88,7 @@ function personaDeRep(r: RepRow): PersonaImpresion & { propone: string } {
     telefono: r.telefono,
     correoElectronico: r.correoElectronico,
     propone: r.propone,
+    telefonoPropone: r.telefonoPropone,
   };
 }
 

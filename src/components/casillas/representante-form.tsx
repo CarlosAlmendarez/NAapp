@@ -18,6 +18,7 @@ type RepresentanteExistente = {
   correoElectronico: string | null;
   telefono: string | null;
   propone: string;
+  telefonoPropone: string | null;
 };
 
 // Campos del borrador local (nunca la clave de elector).
@@ -28,6 +29,7 @@ const CAMPOS_BORRADOR = [
   "correoElectronico",
   "telefono",
   "propone",
+  "telefonoPropone",
 ] as const;
 
 export function RepresentanteForm({
@@ -123,6 +125,7 @@ export function RepresentanteForm({
       correoElectronico: fd.get("correoElectronico"),
       telefono: fd.get("telefono"),
       propone: fd.get("propone"),
+      telefonoPropone: fd.get("telefonoPropone"),
     };
 
     startTransition(async () => {
@@ -257,7 +260,7 @@ export function RepresentanteForm({
           />
           <FieldError id="err-telefono" messages={fieldErrors.telefono} />
         </div>
-        <div className="space-y-1.5 sm:col-span-2">
+        <div className="space-y-1.5">
           <Label htmlFor="propone">
             ¿Quién propone / recomienda? (partido/coalición) ({casaLabel})
           </Label>
@@ -270,6 +273,18 @@ export function RepresentanteForm({
             {...err("propone")}
           />
           <FieldError id="err-propone" messages={fieldErrors.propone} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="telefonoPropone">Teléfono de quién propone</Label>
+          <Input
+            id="telefonoPropone"
+            name="telefonoPropone"
+            telefonoMx
+            required
+            defaultValue={existente?.telefonoPropone ?? ""}
+            {...err("telefonoPropone")}
+          />
+          <FieldError id="err-telefonoPropone" messages={fieldErrors.telefonoPropone} />
         </div>
       </div>
 

@@ -68,10 +68,13 @@ export default async function CasillasPage({
           {usuario.rol !== "REPRESENTANTE_GENERAL" && (
             <ImprimirCasillasDialog municipios={municipios} distritos={distritos} />
           )}
-          {/* Exportar el catálogo completo (padrón oficial + RC ya
-              capturado) — solo Admin general, ni siquiera Admin de
-              casillas ni RG. La clave de elector nunca se incluye. */}
-          {usuario.rol === "ADMIN_GENERAL" && (
+          {/* Exportar a XLSX (padrón oficial + RC + RG ya capturados). El
+              Admin general exporta el catálogo completo; el Capturador
+              exporta solo lo que le corresponde (su alcance geográfico,
+              nunca el catálogo completo) — ver el filtro aplicado en la
+              propia Server Route. Ni Admin de casillas ni RG lo ven. La
+              clave de elector nunca se incluye. */}
+          {(usuario.rol === "ADMIN_GENERAL" || usuario.rol === "CAPTURADOR") && (
             <Button asChild variant="outline">
               <a href="/api/exportar/casillas">
                 <Download className="h-4 w-4" />

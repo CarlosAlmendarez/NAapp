@@ -56,7 +56,7 @@ function LineaPersona({
   conPropone,
 }: {
   etiqueta: string;
-  p: (PersonaImpresion & { propone?: string }) | null;
+  p: (PersonaImpresion & { propone?: string; telefonoPropone?: string | null }) | null;
   conPropone?: boolean;
 }) {
   if (!p) {
@@ -79,6 +79,8 @@ function LineaPersona({
         <>
           {" · Propone: "}
           {p.propone || "—"}
+          {" · Tel. de quien propone: "}
+          {p.telefonoPropone || "—"}
         </>
       )}
     </p>

@@ -220,6 +220,7 @@ function RepresentanteResumen({
     apellidoPaterno: string;
     apellidoMaterno: string | null;
     propone: string;
+    telefonoPropone: string | null;
     correoElectronico: string | null;
     telefono: string | null;
     capturadoEn: Date;
@@ -239,7 +240,8 @@ function RepresentanteResumen({
             <>
               <p className="truncate text-sm text-foreground">{nombreCompleto(representante)}</p>
               <p className="truncate text-xs text-muted-foreground">
-                Propone: {representante.propone} ({casaLabel})
+                Propone: {representante.propone} ({casaLabel}) · Tel. de quien propone:{" "}
+                {representante.telefonoPropone ?? "—"}
               </p>
               <p className="text-xs text-muted-foreground">
                 Capturado el {formatFecha(representante.capturadoEn)}
