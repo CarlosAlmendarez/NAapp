@@ -42,7 +42,7 @@ export default async function CapturarRutaPage({
     [{ id: casilla.id, distritoLocal: casilla.distritoLocal }],
     casa
   );
-  const rc = resumenRc.get(casilla.id) ?? { propietario: null, suplente: null, rgNombre: null };
+  const rc = resumenRc.get(casilla.id) ?? { propietario: null, suplente: null };
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">

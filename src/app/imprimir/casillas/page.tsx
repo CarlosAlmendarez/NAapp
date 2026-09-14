@@ -76,15 +76,15 @@ function RcCasa({ titulo, rc }: { titulo: string; rc: RcImpresion }) {
   );
 }
 
-/** Solo nombre y teléfono del RG — nunca su correo, que ahí no le sirve a
- * quien está en campo. */
-function RgTexto({ rg }: { rg: { nombre: string; telefono: string | null } | null }) {
+/** Solo nombre completo y teléfono del RG (el enlace/ruta ya capturado
+ * para esta casilla, independiente de la casa) — nunca su correo. */
+function RgTexto({ rg }: { rg: { nombre: string; telefono: string } | null }) {
   if (!rg) return <span className="vacio">—</span>;
   return (
     <>
       {rg.nombre}
       {" · Tel: "}
-      {rg.telefono || "—"}
+      {rg.telefono}
     </>
   );
 }
@@ -169,8 +169,7 @@ export default async function ImprimirCasillasPage({
                     <b>Ubicación:</b> {c.ubicacion}
                   </p>
                   <p className="c-row">
-                    <b>RG Casa 26:</b> <RgTexto rg={c.rg.C26} /> · <b>RG Casa 52:</b>{" "}
-                    <RgTexto rg={c.rg.C52} />
+                    <b>RG:</b> <RgTexto rg={c.rg} />
                   </p>
                   <div className="rc-grid">
                     <RcCasa titulo="RC Casa 26" rc={c.rc.C26} />

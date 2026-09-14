@@ -6,7 +6,7 @@ import {
   sinRestriccionGeografica,
   type UsuarioAutenticado,
 } from "@/lib/auth-helpers";
-import { rgConTelefonoPorDistritoYCasa } from "@/lib/rg-query";
+import { nombreCompleto } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
 
@@ -62,17 +62,17 @@ export async function listarCasillas(
       include: {
         // Los badges "capturado" reflejan solo la casa activa.
         representantes: { select: { tipo: true }, where: { casa } },
+        // El "RG" que se muestra en la tarjeta es el enlace/ruta real ya
+        // capturado para esta casilla (nombre completo + teléfono) — no
+        // una cuenta de Usuario, y no depende de la casa.
+        enlace: { select: { nombre: true, apellidoPaterno: true, apellidoMaterno: true, telefono: true } },
       },
     }),
   ]);
 
-  // RG (Representante General) de esta casa, para mostrar en la tarjeta de
-  // cada casilla — igual que en su detalle: solo nombre y teléfono.
-  const distritos = Array.from(new Set(casillasSinRg.map((c) => c.distritoLocal)));
-  const rgs = await rgConTelefonoPorDistritoYCasa(distritos);
   const casillas = casillasSinRg.map((c) => ({
     ...c,
-    rg: rgs.get(c.distritoLocal)?.[casa] ?? null,
+    rg: c.enlace ? { nombre: nombreCompleto(c.enlace), telefono: c.enlace.telefono } : null,
   }));
 
   return {

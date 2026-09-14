@@ -468,9 +468,9 @@ export function RutaForm({
 }
 
 /**
- * Contexto para el RG que captura la ruta: quién es el RC de esa casilla
- * en la casa activa. El suplente solo llega aquí si la casilla no tiene
- * RG (lo resuelve rutas-query). Nunca muestra clave de elector.
+ * Contexto para el RG que captura la ruta: quién es el RC (propietario y
+ * suplente, ambos si están capturados) de esa casilla en la casa activa —
+ * un dato aparte e independiente del RG. Nunca muestra clave de elector.
  */
 function RcContexto({ rc, casaLabel }: { rc: RcResumenCasilla; casaLabel: string }) {
   const sinNada = !rc.propietario && !rc.suplente;
@@ -485,7 +485,6 @@ function RcContexto({ rc, casaLabel }: { rc: RcResumenCasilla; casaLabel: string
           {rc.suplente && ` · Suplente: ${nombreCompleto(rc.suplente)}`}
         </>
       )}
-      {rc.rgNombre && ` · RG: ${rc.rgNombre}`}
     </p>
   );
 }

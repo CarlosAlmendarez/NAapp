@@ -3,14 +3,15 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { filtroCasillasPorRol, type UsuarioAutenticado } from "@/lib/auth-helpers";
 import { decryptField } from "@/lib/crypto";
-import { rgConTelefonoPorDistritoYCasa, type RgDeCasilla } from "@/lib/rg-query";
+import { nombreCompleto } from "@/lib/utils";
 import type { PersonaImpresion, RcImpresion } from "@/lib/rutas-impresion";
 
 /**
  * Datos para la vista de impresión / PDF de Casillas (ver
  * src/app/imprimir/casillas). Trae la información COMPLETA de cada casilla
  * (hasta el domicilio), el RC propietario/suplente de AMBAS casas (26 y
- * 52) y el RG asignado a su distrito en cada casa. Lo no capturado sale en
+ * 52) y el "RG" (el enlace/ruta ya capturado para esa casilla — nombre
+ * completo y teléfono, independiente de la casa). Lo no capturado sale en
  * blanco. La impresión SIEMPRE se acota por municipio o por distrito local
  * (son demasiadas casillas para imprimirlas todas juntas).
  */
@@ -26,7 +27,7 @@ export type CasillaImpresionCatalogo = {
   coloniaLocalidad: string;
   codigoPostal: string | null;
   ubicacion: string;
-  rg: { C26: RgDeCasilla | null; C52: RgDeCasilla | null };
+  rg: { nombre: string; telefono: string } | null;
   rc: { C26: RcImpresion; C52: RcImpresion };
 };
 
@@ -87,11 +88,8 @@ export async function listarCasillasParaImpresion(
   const casillas = await prisma.casilla.findMany({
     where: { AND: and },
     orderBy: [{ distritoLocal: "asc" }, { seccion: "asc" }, { tipoCasilla: "asc" }],
-    include: { representantes: true },
+    include: { representantes: true, enlace: true },
   });
-
-  const distritos = Array.from(new Set(casillas.map((c) => c.distritoLocal)));
-  const rgs = await rgConTelefonoPorDistritoYCasa(distritos);
 
   return casillas.map((c) => ({
     id: c.id,
@@ -104,7 +102,7 @@ export async function listarCasillasParaImpresion(
     coloniaLocalidad: c.coloniaLocalidad,
     codigoPostal: c.codigoPostal,
     ubicacion: c.ubicacion,
-    rg: rgs.get(c.distritoLocal) ?? { C26: null, C52: null },
+    rg: c.enlace ? { nombre: nombreCompleto(c.enlace), telefono: c.enlace.telefono } : null,
     rc: {
       C26: rcDeCasa(c.representantes as RepRow[], "C26"),
       C52: rcDeCasa(c.representantes as RepRow[], "C52"),

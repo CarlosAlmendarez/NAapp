@@ -3,15 +3,16 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { filtroCasillasPorRol, type UsuarioAutenticado } from "@/lib/auth-helpers";
 import { decryptField } from "@/lib/crypto";
-import { rgUnicoPorDistrito, type RgDeCasilla } from "@/lib/rg-query";
 
 /**
  * Datos para la vista de impresión / PDF de Rutas (ver
  * src/app/imprimir/rutas). Agrupa igual que el listado principal
  * (`listarCasillasParaRuta`) — por `rutaId`, ordenado por `capturadoEn` —
- * pero trae la información COMPLETA de cada casilla, el RG asignado a su
- * distrito y el RC propietario/suplente de AMBAS casas (26 y 52). La clave
- * de elector se descifra a propósito: este documento la incluye.
+ * pero trae la información COMPLETA de cada casilla y el RC
+ * propietario/suplente de AMBAS casas (26 y 52). El "RG" de la ruta (el
+ * enlace) ya se identifica una sola vez a nivel de ruta ("Ruta de
+ * {enlace}"), no por casilla — no hace falta repetirlo. La clave de
+ * elector se descifra a propósito: este documento la incluye.
  *
  * Alcance: un RG solo ve sus rutas (mismo `filtroCasillasPorRol` que el
  * resto del módulo); un Admin ve todas, o una sola si se pasa `rutaId`.
@@ -43,12 +44,6 @@ export type CasillaImpresion = {
   coloniaLocalidad: string;
   codigoPostal: string | null;
   ubicacion: string;
-  /**
-   * RG (Representante General) del distrito de la casilla. Único (no por
-   * casa) — la ruta/enlace no tiene noción de casa, y en la práctica un
-   * mismo RG atiende ambas.
-   */
-  rg: RgDeCasilla | null;
   rc: { C26: RcImpresion; C52: RcImpresion };
 };
 
@@ -120,10 +115,6 @@ export async function listarRutasParaImpresion(
     include: { enlace: true, representantes: true },
   });
 
-  const rgs = await rgUnicoPorDistrito(
-    Array.from(new Set(casillas.map((c) => c.distritoLocal)))
-  );
-
   const grupos = new Map<string, typeof casillas>();
   for (const c of casillas) {
     if (!c.enlace) continue;
@@ -161,7 +152,6 @@ export async function listarRutasParaImpresion(
           coloniaLocalidad: c.coloniaLocalidad,
           codigoPostal: c.codigoPostal,
           ubicacion: c.ubicacion,
-          rg: rgs.get(c.distritoLocal) ?? null,
           rc: {
             C26: rcDeCasa(c.representantes as RepRow[], "C26"),
             C52: rcDeCasa(c.representantes as RepRow[], "C52"),

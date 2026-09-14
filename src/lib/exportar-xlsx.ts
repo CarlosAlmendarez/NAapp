@@ -4,7 +4,7 @@ import { Prisma, type Casa } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { CASA_NUMERO } from "@/lib/casa";
 import { decryptField } from "@/lib/crypto";
-import { rgConTelefonoPorDistritoYCasa } from "@/lib/rg-query";
+import { nombreCompleto } from "@/lib/utils";
 
 /**
  * Recrea el formato exacto del padrón oficial ("SECCIONES Y CASILLAS
@@ -71,9 +71,10 @@ const COL_PROPIETARIO = 10;
 const COL_SUPLENTE = 18;
 const FIN_BASE = ENCABEZADO_COLUMNAS_BASE.length; // 26
 
-// Exportación 1 — "Casillas": además del RC, muestra el RG (Representante
-// General) de la casa activa, tal cual aparece en la vista normal de una
-// casilla — "Sin RG asignado" cuando no tiene.
+// Exportación 1 — "Casillas": además del RC, muestra el "RG" (el
+// enlace/ruta ya capturado para esa casilla — nombre completo y teléfono,
+// independiente de la casa), tal cual aparece en la vista normal de una
+// casilla — "Sin RG capturado" cuando no tiene.
 const ENCABEZADO_COLUMNAS = [
   ...ENCABEZADO_COLUMNAS_BASE,
   "RG - Nombre",
@@ -163,23 +164,19 @@ export async function construirLibroCasillas(
   const casillas = await prisma.casilla.findMany({
     where: filtro,
     orderBy: [{ municipio: "asc" }, { seccion: "asc" }, { tipoCasilla: "asc" }],
-    include: { representantes: { where: { casa } } },
+    include: { representantes: { where: { casa } }, enlace: true },
   });
-
-  const distritos = Array.from(new Set(casillas.map((c) => c.distritoLocal)));
-  const rgs = await rgConTelefonoPorDistritoYCasa(distritos);
 
   const numeroCasa = CASA_NUMERO[casa];
   const filas = casillas.map((c) => {
     const propietario = c.representantes.find((r) => r.tipo === "PROPIETARIO") ?? null;
     const suplente = c.representantes.find((r) => r.tipo === "SUPLENTE") ?? null;
-    const rg = rgs.get(c.distritoLocal)?.[casa] ?? null;
     return [
       ...filaCasillaBase(c),
       ...filaRepresentante(propietario),
       ...filaRepresentante(suplente),
-      rg?.nombre ?? "Sin RG asignado",
-      rg?.telefono ?? "",
+      c.enlace ? nombreCompleto(c.enlace) : "Sin RG capturado",
+      c.enlace?.telefono ?? "",
       numeroCasa,
     ];
   });

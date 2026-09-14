@@ -5,7 +5,6 @@ import { requireUser, tieneAccesoALocalidad } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { requireCasaActiva } from "@/lib/casa-server";
 import { CASA_LABEL } from "@/lib/casa";
-import { obtenerRgDeCasilla } from "@/lib/rg-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,10 +38,11 @@ export default async function CasillaDetallePage({
   }
 
   const enlace = casilla.enlace;
-  // Cambio 2: a quien captura RC se le muestra quién es el RG de esta
-  // casilla — sin importar la casa (un RG lo es del distrito, no de una
-  // casa en particular). El RC suplente solo se ofrece si NO hay RG.
-  const rg = await obtenerRgDeCasilla(casilla.distritoLocal);
+  // El "RG" que se muestra a quien captura RC es el enlace/ruta real ya
+  // capturado para ESTA casilla (nombre completo + teléfono), no la cuenta
+  // de Usuario del RG — es un dato aparte e independiente del RC/suplente,
+  // que se capturan siempre sin importar si ya hay RG o no.
+  const rg = enlace ? { nombre: nombreCompleto(enlace), telefono: enlace.telefono } : null;
 
   // El Representante General no captura RC, y tampoco ve aquí la sección
   // de Enlace: siempre debe capturar/editar enlaces desde el módulo de
@@ -53,9 +53,6 @@ export default async function CasillaDetallePage({
   const puedeVerEnlace = usuario.rol === "ADMIN_GENERAL";
   const propietario = casilla.representantes.find((r) => r.tipo === "PROPIETARIO");
   const suplente = casilla.representantes.find((r) => r.tipo === "SUPLENTE");
-  // El suplente solo se muestra/captura si la casilla no tiene RG en esta
-  // casa (aunque si ya hubiera un suplente capturado, se sigue mostrando).
-  const mostrarSuplente = !rg || Boolean(suplente);
 
   return (
     <div className="space-y-6">
@@ -111,11 +108,11 @@ export default async function CasillaDetallePage({
                 </p>
                 {rg ? (
                   <p className="text-muted-foreground">
-                    {rg.nombre} · Tel: {rg.telefono ?? "—"}
+                    {rg.nombre} · Tel: {rg.telefono}
                   </p>
                 ) : (
                   <p className="text-muted-foreground">
-                    Sin RG asignado. Puedes capturar RC igualmente.
+                    Sin RG capturado. Puedes capturar RC igualmente.
                   </p>
                 )}
               </div>
@@ -129,21 +126,13 @@ export default async function CasillaDetallePage({
             casaLabel={CASA_LABEL[casa]}
             representante={propietario}
           />
-          {mostrarSuplente ? (
-            <RepresentanteResumen
-              casillaId={casilla.id}
-              tipo="SUPLENTE"
-              etiqueta="RC Suplente"
-              casaLabel={CASA_LABEL[casa]}
-              representante={suplente}
-            />
-          ) : (
-            <Card>
-              <CardContent className="p-4 text-sm text-muted-foreground">
-                El RC suplente no se captura: esta casilla ya tiene Representante General.
-              </CardContent>
-            </Card>
-          )}
+          <RepresentanteResumen
+            casillaId={casilla.id}
+            tipo="SUPLENTE"
+            etiqueta="RC Suplente"
+            casaLabel={CASA_LABEL[casa]}
+            representante={suplente}
+          />
         </div>
       )}
 

@@ -37,14 +37,12 @@ export function RepresentanteForm({
   tipo,
   casaLabel,
   existente,
-  puedeCapturarSuplente = false,
   siguientePendienteId = null,
 }: {
   casillaId: string;
   tipo: "PROPIETARIO" | "SUPLENTE";
   casaLabel: string;
   existente?: RepresentanteExistente;
-  puedeCapturarSuplente?: boolean;
   siguientePendienteId?: string | null;
 }) {
   const router = useRouter();
@@ -302,7 +300,7 @@ export function RepresentanteForm({
         <Button type="submit" disabled={isPending}>
           {isPending ? "Guardando…" : "Guardar representante"}
         </Button>
-        {tipo === "PROPIETARIO" && puedeCapturarSuplente && (
+        {tipo === "PROPIETARIO" && (
           <Button
             type="button"
             variant="secondary"

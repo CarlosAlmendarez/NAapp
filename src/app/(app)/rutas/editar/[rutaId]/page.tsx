@@ -51,7 +51,7 @@ export default async function EditarRutaPage({
     tipoCasilla: e.casilla.tipoCasilla,
     coloniaLocalidad: e.casilla.coloniaLocalidad,
     ubicacion: e.casilla.ubicacion,
-    rc: resumenRc.get(e.casillaId) ?? { propietario: null, suplente: null, rgNombre: null },
+    rc: resumenRc.get(e.casillaId) ?? { propietario: null, suplente: null },
   }));
 
   const enlace = enlaces[0]!;

@@ -3,9 +3,9 @@ import { requireUser, tieneAccesoALocalidad } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { requireCasaActiva } from "@/lib/casa-server";
 import { CASA_LABEL } from "@/lib/casa";
-import { obtenerRgDeCasilla } from "@/lib/rg-query";
 import { casillasPendientesDeRc } from "@/lib/casillas-query";
 import { decryptField } from "@/lib/crypto";
+import { nombreCompleto } from "@/lib/utils";
 import { RepresentanteForm } from "@/components/casillas/representante-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -27,22 +27,25 @@ export default async function RepresentantePage({
   // para dejarlo llegar hasta aquí).
   if (usuario.rol === "REPRESENTANTE_GENERAL") notFound();
 
-  const casilla = await prisma.casilla.findUnique({ where: { id } });
+  const casilla = await prisma.casilla.findUnique({
+    where: { id },
+    include: { enlace: true },
+  });
   if (!casilla) notFound();
   if (!tieneAccesoALocalidad(usuario, casilla)) {
     notFound();
   }
 
-  // El RC suplente solo se captura si la casilla no tiene RG — sin
-  // importar la casa (misma regla que en el detalle; la Server Action
-  // también la aplica).
-  const rg = await obtenerRgDeCasilla(casilla.distritoLocal);
+  // El "RG" es el enlace/ruta ya capturado para esta casilla (nombre
+  // completo + teléfono) — un dato aparte e independiente del RC, que se
+  // captura siempre sin importar si ya hay RG o no.
+  const rg = casilla.enlace
+    ? { nombre: nombreCompleto(casilla.enlace), telefono: casilla.enlace.telefono }
+    : null;
 
   const existente = await prisma.representanteCasilla.findUnique({
     where: { casillaId_tipo_casa: { casillaId: id, tipo, casa } },
   });
-
-  if (tipo === "SUPLENTE" && rg && !existente) notFound();
 
   // La clave de elector se muestra descifrada en la edición (es sensible
   // pero debe verse para poder corregir sin perderla).
@@ -67,7 +70,7 @@ export default async function RepresentantePage({
         </CardTitle>
         {rg && (
           <p className="text-sm text-muted-foreground">
-            RG de esta casilla: {rg.nombre} · Tel: {rg.telefono ?? "—"}
+            RG de esta casilla: {rg.nombre} · Tel: {rg.telefono}
           </p>
         )}
       </CardHeader>
@@ -76,7 +79,6 @@ export default async function RepresentantePage({
           casillaId={id}
           tipo={tipo}
           casaLabel={CASA_LABEL[casa]}
-          puedeCapturarSuplente={!rg}
           siguientePendienteId={siguienteId}
           existente={
             existente

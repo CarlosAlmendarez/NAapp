@@ -97,20 +97,7 @@ function RcCasa({ titulo, rc }: { titulo: string; rc: RcImpresion }) {
   );
 }
 
-/** Solo nombre y teléfono del RG — nunca su correo, que ahí no le sirve a
- * quien está en campo. */
-function RgTexto({ rg }: { rg: { nombre: string; telefono: string | null } | null }) {
-  if (!rg) return <span className="rc-vacio">—</span>;
-  return (
-    <>
-      {rg.nombre}
-      {" · Tel: "}
-      {rg.telefono || "—"}
-    </>
-  );
-}
-
-function CasillaBloque({ c, mostrarRg }: { c: CasillaImpresion; mostrarRg: boolean }) {
+function CasillaBloque({ c }: { c: CasillaImpresion }) {
   return (
     <div className="casilla">
       <p className="c-h">
@@ -128,15 +115,6 @@ function CasillaBloque({ c, mostrarRg }: { c: CasillaImpresion; mostrarRg: boole
       <p className="c-row">
         <b>Ubicación:</b> {c.ubicacion}
       </p>
-      {/* El RG es del distrito, no de una casa — se muestra una sola vez
-          (no repetido) mientras las casillas consecutivas de la ruta
-          compartan el mismo RG; ver el cálculo de `mostrarRg` en el mapeo
-          de la ruta. */}
-      {mostrarRg && c.rg && (
-        <p className="c-row">
-          <b>RG:</b> <RgTexto rg={c.rg} />
-        </p>
-      )}
       <div className="rc-grid">
         <RcCasa titulo="RC Casa 26" rc={c.rc.C26} />
         <RcCasa titulo="RC Casa 52" rc={c.rc.C52} />
@@ -193,13 +171,9 @@ export default async function ImprimirRutasPage({
                   {r.enlace.claveElector || "—"}
                 </p>
               </div>
-              {r.casillas.map((c, i) => {
-                const anterior = r.casillas[i - 1];
-                const mismoRgQueAnterior = i > 0 && c.rg?.id === anterior?.rg?.id;
-                return (
-                  <CasillaBloque key={c.id} c={c} mostrarRg={!mismoRgQueAnterior} />
-                );
-              })}
+              {r.casillas.map((c) => (
+                <CasillaBloque key={c.id} c={c} />
+              ))}
             </section>
           ))
         )}

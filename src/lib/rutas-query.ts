@@ -46,13 +46,13 @@ type PersonaNombre = {
 
 /**
  * Contexto que se muestra a quien captura una ruta (RG): quién es el RC
- * de esa casilla en la casa activa. El suplente solo se incluye si la
- * casilla NO tiene RG asignado en esa casa. NUNCA lleva clave de elector.
+ * (propietario y suplente, ambos si están capturados) de esa casilla en la
+ * casa activa. Son datos independientes del RG (el enlace de la ruta):
+ * siempre se muestran los que existan. NUNCA lleva clave de elector.
  */
 export type RcResumenCasilla = {
   propietario: PersonaNombre | null;
   suplente: PersonaNombre | null;
-  rgNombre: string | null;
 };
 
 export type CasillaBusquedaRuta = {
@@ -95,10 +95,9 @@ function soloNombre(p: PersonaNombre): PersonaNombre {
 }
 
 /**
- * Para un conjunto de casillas, arma el resumen de RC (propietario /
- * suplente) y del RG de cada una en la casa dada. El suplente se omite
- * cuando la casilla tiene RG (regla de captura: el suplente solo se usa
- * si no hay RG). Se consulta en bloque para no hacer N+1 desde la UI.
+ * Para un conjunto de casillas, arma el resumen de RC (propietario y
+ * suplente, ambos si están capturados) en la casa dada. Se consulta en
+ * bloque para no hacer N+1 desde la UI.
  */
 export async function obtenerResumenRcDeCasillas(
   casillas: { id: string; distritoLocal: string }[],
@@ -108,52 +107,25 @@ export async function obtenerResumenRcDeCasillas(
   if (casillas.length === 0) return resultado;
 
   const casillaIds = casillas.map((c) => c.id);
-  const distritos = Array.from(new Set(casillas.map((c) => c.distritoLocal)));
 
-  const [representantes, rgs] = await Promise.all([
-    prisma.representanteCasilla.findMany({
-      where: { casillaId: { in: casillaIds }, casa },
-      select: {
-        casillaId: true,
-        tipo: true,
-        nombre: true,
-        apellidoPaterno: true,
-        apellidoMaterno: true,
-      },
-    }),
-    // El RG es del distrito, sin importar la casa (ver rg-query.ts):
-    // si el distrito ya tiene RG en cualquiera de las dos casas, la regla
-    // de "sin suplente" y el aviso informativo aplican igual.
-    prisma.usuario.findMany({
-      where: {
-        rol: "REPRESENTANTE_GENERAL",
-        activo: true,
-        localidades: { some: { tipo: "DISTRITO_LOCAL", valor: { in: distritos } } },
-      },
-      select: {
-        nombre: true,
-        localidades: { where: { tipo: "DISTRITO_LOCAL" }, select: { valor: true } },
-      },
-    }),
-  ]);
-
-  const rgPorDistrito = new Map<string, string>();
-  for (const rg of rgs) {
-    for (const l of rg.localidades) {
-      if (distritos.includes(l.valor)) rgPorDistrito.set(l.valor, rg.nombre);
-    }
-  }
+  const representantes = await prisma.representanteCasilla.findMany({
+    where: { casillaId: { in: casillaIds }, casa },
+    select: {
+      casillaId: true,
+      tipo: true,
+      nombre: true,
+      apellidoPaterno: true,
+      apellidoMaterno: true,
+    },
+  });
 
   for (const casilla of casillas) {
     const propios = representantes.filter((r) => r.casillaId === casilla.id);
-    const rgNombre = rgPorDistrito.get(casilla.distritoLocal) ?? null;
     const propietario = propios.find((r) => r.tipo === "PROPIETARIO");
     const suplente = propios.find((r) => r.tipo === "SUPLENTE");
     resultado.set(casilla.id, {
       propietario: propietario ? soloNombre(propietario) : null,
-      // El suplente solo se muestra si la casilla no tiene RG en esta casa.
-      suplente: !rgNombre && suplente ? soloNombre(suplente) : null,
-      rgNombre,
+      suplente: suplente ? soloNombre(suplente) : null,
     });
   }
 
@@ -296,6 +268,6 @@ export async function buscarCasillasParaRuta(
     tipoCasilla: c.tipoCasilla,
     coloniaLocalidad: c.coloniaLocalidad,
     ubicacion: c.ubicacion,
-    rc: resumenRc.get(c.id) ?? { propietario: null, suplente: null, rgNombre: null },
+    rc: resumenRc.get(c.id) ?? { propietario: null, suplente: null },
   }));
 }
