@@ -150,38 +150,53 @@ export default async function ImprimirCasillasPage({
           grupos.map((g) => (
             <div key={g.distrito}>
               {grupos.length > 1 && <h2 className="grupo">Distrito local {g.distrito}</h2>}
-              {g.casillas.map((c) => (
-                <div key={c.id} className="casilla">
-                  <p className="c-h">
-                    Sección {c.seccion} · {formatTipoCasilla(c.tipoCasilla)} · {c.municipio}
-                    {" · Distrito local "}
-                    {c.distritoLocal}
-                    {c.distritoFederal ? ` · Distrito federal ${c.distritoFederal}` : ""}
-                  </p>
-                  <p className="c-row">
-                    {c.coloniaLocalidad}
-                    {c.codigoPostal ? ` · C.P. ${c.codigoPostal}` : ""}
-                  </p>
-                  <p className="c-row">
-                    <b>Domicilio:</b> {c.domicilio}
-                  </p>
-                  <p className="c-row">
-                    <b>Ubicación:</b> {c.ubicacion}
-                  </p>
-                  {/* El RG (enlace) no depende de la casa — es el mismo dato
-                      de un lado y del otro — pero se repite bajo ambas
-                      etiquetas para que quede claro a qué corresponde cada
-                      bloque de RC, igual que antes. */}
-                  <p className="c-row">
-                    <b>RG Casa 26:</b> <RgTexto rg={c.rg} /> · <b>RG Casa 52:</b>{" "}
-                    <RgTexto rg={c.rg} />
-                  </p>
-                  <div className="rc-grid">
-                    <RcCasa titulo="RC Casa 26" rc={c.rc.C26} />
-                    <RcCasa titulo="RC Casa 52" rc={c.rc.C52} />
+              {g.casillas.map((c, i) => {
+                // No repetir la línea de RG cuando es el mismo que en la
+                // casilla justo anterior (frecuente: un mismo enlace cubre
+                // varias casillas seguidas de su ruta). El enlace es una
+                // fila POR CASILLA (no hay un id compartido entre ellas
+                // aunque sea la misma persona), así que se compara por
+                // nombre + teléfono.
+                const anterior = g.casillas[i - 1];
+                const mismoRgQueAnterior =
+                  i > 0 &&
+                  c.rg?.nombre === anterior?.rg?.nombre &&
+                  c.rg?.telefono === anterior?.rg?.telefono;
+                return (
+                  <div key={c.id} className="casilla">
+                    <p className="c-h">
+                      Sección {c.seccion} · {formatTipoCasilla(c.tipoCasilla)} · {c.municipio}
+                      {" · Distrito local "}
+                      {c.distritoLocal}
+                      {c.distritoFederal ? ` · Distrito federal ${c.distritoFederal}` : ""}
+                    </p>
+                    <p className="c-row">
+                      {c.coloniaLocalidad}
+                      {c.codigoPostal ? ` · C.P. ${c.codigoPostal}` : ""}
+                    </p>
+                    <p className="c-row">
+                      <b>Domicilio:</b> {c.domicilio}
+                    </p>
+                    <p className="c-row">
+                      <b>Ubicación:</b> {c.ubicacion}
+                    </p>
+                    {/* El RG (enlace) no depende de la casa — es el mismo
+                        dato de un lado y del otro — pero se repite bajo
+                        ambas etiquetas para que quede claro a qué
+                        corresponde cada bloque de RC, igual que antes. */}
+                    {c.rg && !mismoRgQueAnterior && (
+                      <p className="c-row">
+                        <b>RG Casa 26:</b> <RgTexto rg={c.rg} /> · <b>RG Casa 52:</b>{" "}
+                        <RgTexto rg={c.rg} />
+                      </p>
+                    )}
+                    <div className="rc-grid">
+                      <RcCasa titulo="RC Casa 26" rc={c.rc.C26} />
+                      <RcCasa titulo="RC Casa 52" rc={c.rc.C52} />
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ))
         )}
