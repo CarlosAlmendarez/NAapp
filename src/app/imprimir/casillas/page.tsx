@@ -150,54 +150,40 @@ export default async function ImprimirCasillasPage({
           grupos.map((g) => (
             <div key={g.distrito}>
               {grupos.length > 1 && <h2 className="grupo">Distrito local {g.distrito}</h2>}
-              {g.casillas.map((c, i) => {
-                // No repetir la línea de RG cuando es el mismo que en la
-                // casilla justo anterior (frecuente: un mismo enlace cubre
-                // varias casillas seguidas de su ruta). El enlace es una
-                // fila POR CASILLA (no hay un id compartido entre ellas
-                // aunque sea la misma persona), así que se compara por
-                // nombre + teléfono.
-                const anterior = g.casillas[i - 1];
-                const mismoRgQueAnterior =
-                  i > 0 &&
-                  c.rg?.nombre === anterior?.rg?.nombre &&
-                  c.rg?.telefono === anterior?.rg?.telefono &&
-                  c.rg?.casa === anterior?.rg?.casa;
-                return (
-                  <div key={c.id} className="casilla">
-                    <p className="c-h">
-                      Sección {c.seccion} · {formatTipoCasilla(c.tipoCasilla)} · {c.municipio}
-                      {" · Distrito local "}
-                      {c.distritoLocal}
-                      {c.distritoFederal ? ` · Distrito federal ${c.distritoFederal}` : ""}
-                    </p>
+              {g.casillas.map((c) => (
+                <div key={c.id} className="casilla">
+                  <p className="c-h">
+                    Sección {c.seccion} · {formatTipoCasilla(c.tipoCasilla)} · {c.municipio}
+                    {" · Distrito local "}
+                    {c.distritoLocal}
+                    {c.distritoFederal ? ` · Distrito federal ${c.distritoFederal}` : ""}
+                  </p>
+                  <p className="c-row">
+                    {c.coloniaLocalidad}
+                    {c.codigoPostal ? ` · C.P. ${c.codigoPostal}` : ""}
+                  </p>
+                  <p className="c-row">
+                    <b>Domicilio:</b> {c.domicilio}
+                  </p>
+                  <p className="c-row">
+                    <b>Ubicación:</b> {c.ubicacion}
+                  </p>
+                  {/* El enlace se dio de alta en UNA casa (nunca cambia al
+                      editarlo) — se muestra solo del lado que corresponde;
+                      el otro queda en "—". Se muestra en TODAS las casillas
+                      que lo tengan capturado, aunque se repita seguido. */}
+                  {c.rg && (
                     <p className="c-row">
-                      {c.coloniaLocalidad}
-                      {c.codigoPostal ? ` · C.P. ${c.codigoPostal}` : ""}
+                      <b>RG Casa 26:</b> <RgTexto rg={c.rg.casa === "C26" ? c.rg : null} /> ·{" "}
+                      <b>RG Casa 52:</b> <RgTexto rg={c.rg.casa === "C52" ? c.rg : null} />
                     </p>
-                    <p className="c-row">
-                      <b>Domicilio:</b> {c.domicilio}
-                    </p>
-                    <p className="c-row">
-                      <b>Ubicación:</b> {c.ubicacion}
-                    </p>
-                    {/* El enlace se dio de alta en UNA casa (nunca cambia
-                        al editarlo) — se muestra solo del lado que
-                        corresponde; el otro queda en "—". */}
-                    {c.rg && !mismoRgQueAnterior && (
-                      <p className="c-row">
-                        <b>RG Casa 26:</b>{" "}
-                        <RgTexto rg={c.rg.casa === "C26" ? c.rg : null} /> ·{" "}
-                        <b>RG Casa 52:</b> <RgTexto rg={c.rg.casa === "C52" ? c.rg : null} />
-                      </p>
-                    )}
-                    <div className="rc-grid">
-                      <RcCasa titulo="RC Casa 26" rc={c.rc.C26} />
-                      <RcCasa titulo="RC Casa 52" rc={c.rc.C52} />
-                    </div>
+                  )}
+                  <div className="rc-grid">
+                    <RcCasa titulo="RC Casa 26" rc={c.rc.C26} />
+                    <RcCasa titulo="RC Casa 52" rc={c.rc.C52} />
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           ))
         )}
