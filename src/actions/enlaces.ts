@@ -53,6 +53,11 @@ export async function buscarCasillasRuta(
  * más (que deben estar libres); sin `rutaId` se crea una ruta nueva y
  * TODAS las casillas deben estar libres. Para quitar una parada de una
  * ruta ya guardada se usa `quitarCasillaDeRuta`.
+ *
+ * Se guarda la casa activa al CREAR el enlace (nunca se toca al editarlo,
+ * igual que capturadoEn/capturadoPorId) — solo para que la impresión de
+ * Casillas sepa de qué lado (Casa 26 / Casa 52) mostrarlo; sigue siendo un
+ * único dato por casilla, no dos.
  */
 export async function guardarRutaEnlaces(
   formData: unknown,
@@ -62,6 +67,9 @@ export async function guardarRutaEnlaces(
   return ejecutarAccion(async () => {
     const usuario = await requireUserOrThrow();
     requireRole(usuario, [...ROLES_MODULO_RUTAS]);
+
+    const casa = await obtenerCasaActiva();
+    if (!casa) throw new AccionError("Elige una casa (26 o 52) antes de capturar.");
 
     const idsUnicos = Array.from(new Set(casillaIds));
     if (idsUnicos.length === 0) {
@@ -125,6 +133,7 @@ export async function guardarRutaEnlaces(
           where: { casillaId: casilla.id },
           create: {
             casillaId: casilla.id,
+            casa,
             nombre: datos.nombre,
             apellidoPaterno: datos.apellidoPaterno,
             apellidoMaterno: datos.apellidoMaterno,
@@ -146,10 +155,10 @@ export async function guardarRutaEnlaces(
             rutaId: rutaIdFinal,
             ordenEnRuta: ordenPorCasillaId.get(casilla.id) ?? 0,
             updatedById: usuario.id,
-            // capturadoEn/capturadoPorId NUNCA se tocan en el update: fijan
-            // el orden real de la ruta (cuándo se visitó esa casilla por
-            // primera vez), que no debe moverse solo porque se corrigió o
-            // reemplazó el enlace.
+            // capturadoEn/capturadoPorId/casa NUNCA se tocan en el update:
+            // fijan el momento y contexto real de la primera captura (para
+            // casa, en qué casa se dio de alta), que no debe moverse solo
+            // porque se corrigió o reemplazó el enlace desde otra casa.
           },
         })
       )

@@ -77,7 +77,7 @@ function RcCasa({ titulo, rc }: { titulo: string; rc: RcImpresion }) {
 }
 
 /** Solo nombre completo y teléfono del RG (el enlace/ruta ya capturado
- * para esta casilla, independiente de la casa) — nunca su correo. */
+ * para esta casilla) — nunca su correo. */
 function RgTexto({ rg }: { rg: { nombre: string; telefono: string } | null }) {
   if (!rg) return <span className="vacio">—</span>;
   return (
@@ -161,7 +161,8 @@ export default async function ImprimirCasillasPage({
                 const mismoRgQueAnterior =
                   i > 0 &&
                   c.rg?.nombre === anterior?.rg?.nombre &&
-                  c.rg?.telefono === anterior?.rg?.telefono;
+                  c.rg?.telefono === anterior?.rg?.telefono &&
+                  c.rg?.casa === anterior?.rg?.casa;
                 return (
                   <div key={c.id} className="casilla">
                     <p className="c-h">
@@ -180,14 +181,14 @@ export default async function ImprimirCasillasPage({
                     <p className="c-row">
                       <b>Ubicación:</b> {c.ubicacion}
                     </p>
-                    {/* El RG (enlace) no depende de la casa — es el mismo
-                        dato de un lado y del otro — pero se repite bajo
-                        ambas etiquetas para que quede claro a qué
-                        corresponde cada bloque de RC, igual que antes. */}
+                    {/* El enlace se dio de alta en UNA casa (nunca cambia
+                        al editarlo) — se muestra solo del lado que
+                        corresponde; el otro queda en "—". */}
                     {c.rg && !mismoRgQueAnterior && (
                       <p className="c-row">
-                        <b>RG Casa 26:</b> <RgTexto rg={c.rg} /> · <b>RG Casa 52:</b>{" "}
-                        <RgTexto rg={c.rg} />
+                        <b>RG Casa 26:</b>{" "}
+                        <RgTexto rg={c.rg.casa === "C26" ? c.rg : null} /> ·{" "}
+                        <b>RG Casa 52:</b> <RgTexto rg={c.rg.casa === "C52" ? c.rg : null} />
                       </p>
                     )}
                     <div className="rc-grid">

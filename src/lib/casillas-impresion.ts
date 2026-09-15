@@ -11,9 +11,12 @@ import type { PersonaImpresion, RcImpresion } from "@/lib/rutas-impresion";
  * src/app/imprimir/casillas). Trae la información COMPLETA de cada casilla
  * (hasta el domicilio), el RC propietario/suplente de AMBAS casas (26 y
  * 52) y el "RG" (el enlace/ruta ya capturado para esa casilla — nombre
- * completo y teléfono, independiente de la casa). Lo no capturado sale en
- * blanco. La impresión SIEMPRE se acota por municipio o por distrito local
- * (son demasiadas casillas para imprimirlas todas juntas).
+ * completo y teléfono, con la casa en la que se dio de alta). Sigue
+ * siendo UN solo enlace por casilla (no dos), pero llevar su casa permite
+ * mostrarlo solo del lado que corresponde en vez de repetirlo en ambos.
+ * Lo no capturado sale en blanco. La impresión SIEMPRE se acota por
+ * municipio o por distrito local (son demasiadas casillas para
+ * imprimirlas todas juntas).
  */
 
 export type CasillaImpresionCatalogo = {
@@ -27,7 +30,7 @@ export type CasillaImpresionCatalogo = {
   coloniaLocalidad: string;
   codigoPostal: string | null;
   ubicacion: string;
-  rg: { nombre: string; telefono: string } | null;
+  rg: { casa: "C26" | "C52"; nombre: string; telefono: string } | null;
   rc: { C26: RcImpresion; C52: RcImpresion };
 };
 
@@ -102,7 +105,9 @@ export async function listarCasillasParaImpresion(
     coloniaLocalidad: c.coloniaLocalidad,
     codigoPostal: c.codigoPostal,
     ubicacion: c.ubicacion,
-    rg: c.enlace ? { nombre: nombreCompleto(c.enlace), telefono: c.enlace.telefono } : null,
+    rg: c.enlace
+      ? { casa: c.enlace.casa, nombre: nombreCompleto(c.enlace), telefono: c.enlace.telefono }
+      : null,
     rc: {
       C26: rcDeCasa(c.representantes as RepRow[], "C26"),
       C52: rcDeCasa(c.representantes as RepRow[], "C52"),

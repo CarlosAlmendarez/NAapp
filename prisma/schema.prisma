@@ -286,6 +286,13 @@ model EnlaceCasilla {
   casillaId String  @unique
   casilla   Casilla @relation(fields: [casillaId], references: [id], onDelete: Cascade)
 
+  // Casa activa al momento de CAPTURAR el enlace (nunca se toca en
+  // ediciones posteriores, igual que capturadoEn/capturadoPorId). Sigue
+  // habiendo un solo enlace por casilla — esto no lo vuelve "por casa" —
+  // pero permite indicar en la impresión de Casillas a cuál de las dos
+  // corresponde, en vez de mostrarlo repetido en ambas.
+  casa Casa
+
   nombre            String
   apellidoPaterno   String
   apellidoMaterno   String?
