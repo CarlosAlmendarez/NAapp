@@ -171,11 +171,17 @@ export default async function ImprimirCasillasPage({
                   {/* El enlace se dio de alta en UNA casa (nunca cambia al
                       editarlo) — se muestra solo del lado que corresponde;
                       el otro queda en "—". Se muestra en TODAS las casillas
-                      que lo tengan capturado, aunque se repita seguido. */}
-                  {c.rg && (
+                      que lo tengan capturado, aunque se repita seguido; si
+                      genuinamente no hay nada capturado para esta casilla,
+                      se indica en vez de omitir la línea. */}
+                  {c.rg ? (
                     <p className="c-row">
                       <b>RG Casa 26:</b> <RgTexto rg={c.rg.casa === "C26" ? c.rg : null} /> ·{" "}
                       <b>RG Casa 52:</b> <RgTexto rg={c.rg.casa === "C52" ? c.rg : null} />
+                    </p>
+                  ) : (
+                    <p className="c-row">
+                      <b>RG:</b> <span className="vacio">Sin RG capturado</span>
                     </p>
                   )}
                   <div className="rc-grid">
