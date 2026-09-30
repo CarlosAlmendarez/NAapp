@@ -3,8 +3,6 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { requireUser, tieneAccesoALocalidad, puedeUsarModuloRutas } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
-import { requireCasaActiva } from "@/lib/casa-server";
-import { CASA_LABEL } from "@/lib/casa";
 import { obtenerResumenRcDeCasillas } from "@/lib/rutas-query";
 import { decryptField } from "@/lib/crypto";
 import { RutaForm, type ParadaInicial } from "@/components/casillas/ruta-form";
@@ -23,7 +21,6 @@ export default async function EditarRutaPage({
 }) {
   const usuario = await requireUser();
   if (!puedeUsarModuloRutas(usuario)) notFound();
-  const casa = await requireCasaActiva();
   const { rutaId } = await params;
 
   const enlaces = await prisma.enlaceCasilla.findMany({
@@ -39,8 +36,7 @@ export default async function EditarRutaPage({
   }
 
   const resumenRc = await obtenerResumenRcDeCasillas(
-    enlaces.map((e) => ({ id: e.casillaId, distritoLocal: e.casilla.distritoLocal })),
-    casa
+    enlaces.map((e) => ({ id: e.casillaId, distritoLocal: e.casilla.distritoLocal }))
   );
 
   const paradasIniciales: ParadaInicial[] = enlaces.map((e) => ({
@@ -82,7 +78,6 @@ export default async function EditarRutaPage({
         <CardContent>
           <RutaForm
             rutaId={rutaId}
-            casaLabel={CASA_LABEL[casa]}
             paradasIniciales={paradasIniciales}
             personaExistente={{
               nombre: enlace.nombre,

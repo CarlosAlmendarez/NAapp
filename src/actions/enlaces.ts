@@ -24,8 +24,7 @@ const ROLES_MODULO_RUTAS = ["ADMIN_GENERAL", "REPRESENTANTE_GENERAL"] as const;
  * Busca casillas dentro del alcance del usuario para agregarlas a una ruta
  * en captura (ver RutaForm) — usada por el buscador de "+ agregar casilla".
  * Excluye las casillas que YA tienen enlace (una casilla no puede tener
- * dos: el enlace/RG es único por casilla). El `casa` solo se usa para
- * mostrar el contexto del RC (que sí es por casa).
+ * dos: el enlace/RG es único por casilla).
  */
 export async function buscarCasillasRuta(
   texto: string
@@ -33,9 +32,7 @@ export async function buscarCasillasRuta(
   return ejecutarAccion(async () => {
     const usuario = await requireUserOrThrow();
     requireRole(usuario, [...ROLES_MODULO_RUTAS]);
-    const casa = await obtenerCasaActiva();
-    if (!casa) throw new AccionError("Elige una casa (26 o 52) antes de capturar.");
-    return buscarCasillasParaRuta(usuario, casa, texto);
+    return buscarCasillasParaRuta(usuario, texto);
   });
 }
 

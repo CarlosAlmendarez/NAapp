@@ -35,13 +35,11 @@ const CAMPOS_BORRADOR = [
 export function RepresentanteForm({
   casillaId,
   tipo,
-  casaLabel,
   existente,
   siguientePendienteId = null,
 }: {
   casillaId: string;
   tipo: "PROPIETARIO" | "SUPLENTE";
-  casaLabel: string;
   existente?: RepresentanteExistente;
   siguientePendienteId?: string | null;
 }) {
@@ -52,7 +50,9 @@ export function RepresentanteForm({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
   const formRef = useRef<HTMLFormElement>(null);
-  const claveBorrador = `borrador-rc:${casillaId}:${tipo}:${casaLabel}`;
+  // El RC ya no es "por casa" (un solo propietario/suplente compartido),
+  // así que el borrador tampoco se separa por casa.
+  const claveBorrador = `borrador-rc:${casillaId}:${tipo}`;
   const [hayBorrador, setHayBorrador] = useState(false);
 
   // Al montar: si es alta (sin `existente`) y hay un borrador guardado,
@@ -265,7 +265,7 @@ export function RepresentanteForm({
               solo cuando están lado a lado (2 columnas); en móvil, donde se
               apilan en una sola columna, no hace falta. */}
           <Label htmlFor="propone" className="sm:flex sm:min-h-[2.25rem] sm:items-end">
-            ¿Quién propone / recomienda? (partido/coalición) ({casaLabel})
+            ¿Quién propone / recomienda? (partido/coalición)
           </Label>
           <Input
             id="propone"

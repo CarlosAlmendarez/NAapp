@@ -14,9 +14,11 @@ export type Estadisticas = {
 };
 
 /**
- * Estadísticas de avance de captura, respetando el alcance del usuario y
- * acotadas a la casa activa (26 / 52): los RC, suplentes y asistentes se
- * cuentan solo dentro de esa casa; el catálogo de casillas es común.
+ * Estadísticas de avance de captura, respetando el alcance del usuario. El
+ * RC (propietario/suplente) ya no es por casa (un solo dato por casilla,
+ * compartido entre Casa 26 y Casa 52), así que se cuenta igual sin
+ * importar cuál esté activa — solo los asistentes electorales siguen
+ * siendo por casa.
  */
 export async function obtenerEstadisticas(
   usuario: UsuarioAutenticado,
@@ -28,17 +30,17 @@ export async function obtenerEstadisticas(
     await Promise.all([
       prisma.casilla.count({ where: filtro }),
       prisma.representanteCasilla.count({
-        where: { tipo: "PROPIETARIO", casa, casilla: filtro },
+        where: { tipo: "PROPIETARIO", casilla: filtro },
       }),
       prisma.representanteCasilla.count({
-        where: { tipo: "SUPLENTE", casa, casilla: filtro },
+        where: { tipo: "SUPLENTE", casilla: filtro },
       }),
       prisma.casilla.count({
         where: {
           ...filtro,
           AND: [
-            { representantes: { some: { tipo: "PROPIETARIO", casa } } },
-            { representantes: { some: { tipo: "SUPLENTE", casa } } },
+            { representantes: { some: { tipo: "PROPIETARIO" } } },
+            { representantes: { some: { tipo: "SUPLENTE" } } },
           ],
         },
       }),
@@ -102,20 +104,20 @@ export type EstadisticaGrupo = {
 };
 
 /**
- * Desglose por municipio o por distrito local (para la casa dada) — vista
- * de Estadísticas (solo Admin general). Incluye avance de RC (propietario
- * + suplente completos) y de RG (enlace de Rutas capturado, que NO es por
- * casa). El orden/filtro se aplican en la página.
+ * Desglose por municipio o por distrito local — vista de Estadísticas
+ * (solo Admin general). Incluye avance de RC (propietario + suplente
+ * completos) y de RG (enlace de Rutas capturado) — ninguno de los dos es
+ * por casa: son un solo dato por casilla. El orden/filtro se aplican en
+ * la página.
  */
 export async function obtenerEstadisticasPorGrupo(
-  casa: Casa,
   agrupar: AgruparEstadistica
 ): Promise<EstadisticaGrupo[]> {
   const casillas = await prisma.casilla.findMany({
     select: {
       municipio: true,
       distritoLocal: true,
-      representantes: { select: { tipo: true }, where: { casa } },
+      representantes: { select: { tipo: true } },
       enlace: { select: { id: true } },
     },
   });

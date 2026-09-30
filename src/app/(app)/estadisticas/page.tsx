@@ -24,7 +24,6 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Casa } from "@prisma/client";
 
 export const metadata = { title: "Estadísticas" };
 
@@ -99,7 +98,7 @@ export default async function EstadisticasPage({
             </Card>
           }
         >
-          <DetalleGrupos casa={casa} agrupar={agrupar} orden={orden} dir={dir} buscar={buscar} />
+          <DetalleGrupos agrupar={agrupar} orden={orden} dir={dir} buscar={buscar} />
         </Suspense>
       </div>
     </div>
@@ -107,19 +106,17 @@ export default async function EstadisticasPage({
 }
 
 async function DetalleGrupos({
-  casa,
   agrupar,
   orden,
   dir,
   buscar,
 }: {
-  casa: Casa;
   agrupar: AgruparEstadistica;
   orden: string;
   dir: "asc" | "desc";
   buscar: string;
 }) {
-  const porGrupo = await obtenerEstadisticasPorGrupo(casa, agrupar);
+  const porGrupo = await obtenerEstadisticasPorGrupo(agrupar);
 
   const filtradas = buscar
     ? porGrupo.filter((g) => g.grupo.toLowerCase().includes(buscar.toLowerCase()))

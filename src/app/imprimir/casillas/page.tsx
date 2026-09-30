@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth-helpers";
 import { listarCasillasParaImpresion } from "@/lib/casillas-impresion";
-import type { PersonaImpresion, RcImpresion } from "@/lib/rutas-impresion";
+import type { PersonaConCasa, RcImpresion } from "@/lib/rutas-impresion";
 import { formatTipoCasilla } from "@/lib/tipo-casilla";
 import { nombreCompleto, formatFecha } from "@/lib/utils";
 import { BotonImprimir } from "@/components/rutas/boton-imprimir";
@@ -35,13 +35,7 @@ const CSS = `
 }
 `;
 
-function LineaPersona({
-  etiqueta,
-  p,
-}: {
-  etiqueta: string;
-  p: (PersonaImpresion & { propone?: string; telefonoPropone?: string | null }) | null;
-}) {
+function LineaPersona({ etiqueta, p }: { etiqueta: string; p: PersonaConCasa | null }) {
   if (!p) {
     return (
       <p className="rc-linea">
@@ -66,12 +60,17 @@ function LineaPersona({
   );
 }
 
-function RcCasa({ titulo, rc }: { titulo: string; rc: RcImpresion }) {
+/** El RC (propietario/suplente) ya no es por casa: se muestra del lado que
+ * corresponde según en cuál se capturó cada uno (pueden diferir entre sí). */
+function RcCasa({ titulo, rc, casa }: { titulo: string; rc: RcImpresion; casa: "C26" | "C52" }) {
   return (
     <div className="rc-casa">
       <p className="rc-t">{titulo}</p>
-      <LineaPersona etiqueta="Propietario" p={rc.propietario} />
-      <LineaPersona etiqueta="Suplente" p={rc.suplente} />
+      <LineaPersona
+        etiqueta="Propietario"
+        p={rc.propietario?.casa === casa ? rc.propietario : null}
+      />
+      <LineaPersona etiqueta="Suplente" p={rc.suplente?.casa === casa ? rc.suplente : null} />
     </div>
   );
 }
@@ -185,8 +184,8 @@ export default async function ImprimirCasillasPage({
                     </p>
                   )}
                   <div className="rc-grid">
-                    <RcCasa titulo="RC Casa 26" rc={c.rc.C26} />
-                    <RcCasa titulo="RC Casa 52" rc={c.rc.C52} />
+                    <RcCasa titulo="RC Casa 26" rc={c.rc} casa="C26" />
+                    <RcCasa titulo="RC Casa 52" rc={c.rc} casa="C52" />
                   </div>
                 </div>
               ))}

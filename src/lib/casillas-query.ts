@@ -1,5 +1,5 @@
 import "server-only";
-import { Prisma, type Casa } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   filtroCasillasPorRol,
@@ -17,11 +17,7 @@ export type FiltrosCasillas = {
   page?: number;
 };
 
-export async function listarCasillas(
-  usuario: UsuarioAutenticado,
-  casa: Casa,
-  filtros: FiltrosCasillas
-) {
+export async function listarCasillas(usuario: UsuarioAutenticado, filtros: FiltrosCasillas) {
   const page = Math.max(1, filtros.page ?? 1);
 
   // Se combinan como cláusulas AND independientes (no reasignar `where.OR`
@@ -60,8 +56,9 @@ export async function listarCasillas(
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       include: {
-        // Los badges "capturado" reflejan solo la casa activa.
-        representantes: { select: { tipo: true }, where: { casa } },
+        // Los badges "capturado" ya no dependen de la casa: el RC es un
+        // solo dato por casilla, compartido entre Casa 26 y Casa 52.
+        representantes: { select: { tipo: true } },
         // El "RG" que se muestra en la tarjeta es el enlace/ruta real ya
         // capturado para esta casilla (nombre completo + teléfono) — no
         // una cuenta de Usuario, y no depende de la casa.
@@ -128,22 +125,19 @@ export async function distritosDisponibles(usuario: UsuarioAutenticado): Promise
 }
 
 /**
- * Casillas de la casa `casa` (en el alcance del usuario) que aún no
- * tienen RC propietario capturado — pendientes de captura. Devuelve el
- * total y, opcionalmente, la primera después de `despuesDeId` en el orden
- * de captura (municipio → sección → tipo) para encadenar la captura sin
+ * Casillas (en el alcance del usuario) que aún no tienen RC propietario
+ * capturado — pendientes de captura. El RC ya no es por casa, así que
+ * "pendiente" es igual sin importar cuál esté activa. Devuelve el total
+ * y, opcionalmente, la primera después de `despuesDeId` en el orden de
+ * captura (municipio → sección → tipo) para encadenar la captura sin
  * volver al listado ("Guardar y siguiente").
  */
 export async function casillasPendientesDeRc(
   usuario: UsuarioAutenticado,
-  casa: Casa,
   despuesDeId?: string
 ): Promise<{ total: number; siguienteId: string | null }> {
   const sinPropietario: Prisma.CasillaWhereInput = {
-    AND: [
-      filtroCasillasPorRol(usuario),
-      { representantes: { none: { tipo: "PROPIETARIO", casa } } },
-    ],
+    AND: [filtroCasillasPorRol(usuario), { representantes: { none: { tipo: "PROPIETARIO" } } }],
   };
 
   const total = await prisma.casilla.count({ where: sinPropietario });

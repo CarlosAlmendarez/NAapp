@@ -3,8 +3,6 @@ import { notFound } from "next/navigation";
 import { MapPin, UserCheck } from "lucide-react";
 import { requireUser, tieneAccesoALocalidad } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
-import { requireCasaActiva } from "@/lib/casa-server";
-import { CASA_LABEL } from "@/lib/casa";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,14 +15,15 @@ export default async function CasillaDetallePage({
   params: Promise<{ id: string }>;
 }) {
   const usuario = await requireUser();
-  const casa = await requireCasaActiva();
   const { id } = await params;
 
   const casilla = await prisma.casilla.findUnique({
     where: { id },
     include: {
-      representantes: { where: { casa }, orderBy: { tipo: "asc" } },
-      // El enlace de Rutas es único por casilla (no por casa).
+      // El RC (propietario/suplente) ya no es por casa: hay uno solo por
+      // casilla, compartido entre Casa 26 y Casa 52.
+      representantes: { orderBy: { tipo: "asc" } },
+      // El enlace de Rutas también es único por casilla (no por casa).
       enlace: true,
     },
   });
@@ -61,7 +60,7 @@ export default async function CasillaDetallePage({
           <div className="min-w-0">
             <CardTitle>Distrito local {casilla.distritoLocal}</CardTitle>
             <p className="mt-1 text-sm font-normal text-muted-foreground">
-              Sección {casilla.seccion} · datos de {CASA_LABEL[casa]}
+              Sección {casilla.seccion}
             </p>
             <div className="mt-1 flex flex-wrap items-center gap-1.5 whitespace-nowrap text-sm font-normal text-muted-foreground">
               Tipo de Casilla:
@@ -95,9 +94,7 @@ export default async function CasillaDetallePage({
 
       {puedeVerRc && (
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-foreground">
-            Representantes de Casilla — {CASA_LABEL[casa]}
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground">Representantes de Casilla</h2>
 
           <Card>
             <CardContent className="flex items-start gap-3 p-4">
@@ -123,14 +120,12 @@ export default async function CasillaDetallePage({
             casillaId={casilla.id}
             tipo="PROPIETARIO"
             etiqueta="RC Propietario"
-            casaLabel={CASA_LABEL[casa]}
             representante={propietario}
           />
           <RepresentanteResumen
             casillaId={casilla.id}
             tipo="SUPLENTE"
             etiqueta="RC Suplente"
-            casaLabel={CASA_LABEL[casa]}
             representante={suplente}
           />
         </div>
@@ -197,13 +192,11 @@ function RepresentanteResumen({
   casillaId,
   tipo,
   etiqueta,
-  casaLabel,
   representante,
 }: {
   casillaId: string;
   tipo: "PROPIETARIO" | "SUPLENTE";
   etiqueta: string;
-  casaLabel: string;
   representante?: {
     nombre: string;
     apellidoPaterno: string;
@@ -229,7 +222,7 @@ function RepresentanteResumen({
             <>
               <p className="truncate text-sm text-foreground">{nombreCompleto(representante)}</p>
               <p className="truncate text-xs text-muted-foreground">
-                Propone: {representante.propone} ({casaLabel}) · Tel. de quien propone:{" "}
+                Propone: {representante.propone} · Tel. de quien propone:{" "}
                 {representante.telefonoPropone ?? "—"}
               </p>
               <p className="text-xs text-muted-foreground">

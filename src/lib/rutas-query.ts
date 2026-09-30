@@ -1,5 +1,5 @@
 import "server-only";
-import { Prisma, type Casa } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { filtroCasillasPorRol, type UsuarioAutenticado } from "@/lib/auth-helpers";
 
@@ -46,9 +46,10 @@ type PersonaNombre = {
 
 /**
  * Contexto que se muestra a quien captura una ruta (RG): quién es el RC
- * (propietario y suplente, ambos si están capturados) de esa casilla en la
- * casa activa. Son datos independientes del RG (el enlace de la ruta):
- * siempre se muestran los que existan. NUNCA lleva clave de elector.
+ * (propietario y suplente, ambos si están capturados) de esa casilla — ya
+ * no es por casa: un solo dato compartido. Son datos independientes del
+ * RG (el enlace de la ruta): siempre se muestran los que existan. NUNCA
+ * lleva clave de elector.
  */
 export type RcResumenCasilla = {
   propietario: PersonaNombre | null;
@@ -96,12 +97,11 @@ function soloNombre(p: PersonaNombre): PersonaNombre {
 
 /**
  * Para un conjunto de casillas, arma el resumen de RC (propietario y
- * suplente, ambos si están capturados) en la casa dada. Se consulta en
- * bloque para no hacer N+1 desde la UI.
+ * suplente, ambos si están capturados). Se consulta en bloque para no
+ * hacer N+1 desde la UI.
  */
 export async function obtenerResumenRcDeCasillas(
-  casillas: { id: string; distritoLocal: string }[],
-  casa: Casa
+  casillas: { id: string; distritoLocal: string }[]
 ): Promise<Map<string, RcResumenCasilla>> {
   const resultado = new Map<string, RcResumenCasilla>();
   if (casillas.length === 0) return resultado;
@@ -109,7 +109,7 @@ export async function obtenerResumenRcDeCasillas(
   const casillaIds = casillas.map((c) => c.id);
 
   const representantes = await prisma.representanteCasilla.findMany({
-    where: { casillaId: { in: casillaIds }, casa },
+    where: { casillaId: { in: casillaIds } },
     select: {
       casillaId: true,
       tipo: true,
@@ -222,12 +222,11 @@ export async function listarCasillasParaRuta(
  * o el nombre del inmueble/colonia. EXCLUYE las casillas que ya tienen
  * enlace capturado: el enlace/RG es único por casilla y no se recaptura
  * (para corregirlo se usa "Editar ruta"). Cada resultado incluye el
- * resumen de RC/RG de esa casilla en la casa activa (contexto para el RG;
- * el RC sí es por casa).
+ * resumen de RC de esa casilla (contexto para el RG) — ninguno de los dos
+ * es por casa.
  */
 export async function buscarCasillasParaRuta(
   usuario: UsuarioAutenticado,
-  casa: Casa,
   texto: string
 ): Promise<CasillaBusquedaRuta[]> {
   const termino = texto.trim();
@@ -256,8 +255,7 @@ export async function buscarCasillasParaRuta(
   });
 
   const resumenRc = await obtenerResumenRcDeCasillas(
-    casillas.map((c) => ({ id: c.id, distritoLocal: c.distritoLocal })),
-    casa
+    casillas.map((c) => ({ id: c.id, distritoLocal: c.distritoLocal }))
   );
 
   return casillas.map((c) => ({

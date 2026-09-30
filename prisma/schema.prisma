@@ -202,8 +202,10 @@ model RepresentanteCasilla {
   casillaId String
   casilla   Casilla           @relation(fields: [casillaId], references: [id], onDelete: Cascade)
   tipo      TipoRepresentante
-  // Casa a la que pertenece este dato (ver enum Casa). Las capturas
-  // previas a esta columna se migraron a C26.
+  // Casa activa al momento de CAPTURAR (nunca se toca al editar), solo
+  // para identificar el origen — igual que EnlaceCasilla.casa. El RC deja
+  // de ser "por casa": hay UN propietario y UN suplente por casilla,
+  // compartidos entre Casa 26 y Casa 52.
   casa      Casa
 
   nombre            String
@@ -228,8 +230,9 @@ model RepresentanteCasilla {
   updatedBy   Usuario? @relation("RepresentanteUpdatedBy", fields: [updatedById], references: [id])
   updatedAt   DateTime @updatedAt
 
-  // Como máximo un propietario y un suplente por casilla POR casa.
-  @@unique([casillaId, tipo, casa])
+  // Como máximo un propietario y un suplente por casilla (sin importar la
+  // casa — ver comentario de `casa` arriba).
+  @@unique([casillaId, tipo])
   @@index([casillaId])
   @@index([casa])
   @@map("representantes_casilla")

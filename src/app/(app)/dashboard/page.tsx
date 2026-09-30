@@ -30,7 +30,7 @@ export default async function DashboardPage() {
   // Llamada a la acción para el capturador: cuántas casillas le faltan y
   // cuál es la siguiente.
   const pendientesRc =
-    usuario.rol === "CAPTURADOR" ? await casillasPendientesDeRc(usuario, casa) : null;
+    usuario.rol === "CAPTURADOR" ? await casillasPendientesDeRc(usuario) : null;
 
   return (
     <div className="space-y-6">

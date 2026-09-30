@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requireUser, puedeUsarModuloRutas } from "@/lib/auth-helpers";
 import {
   listarRutasParaImpresion,
-  type PersonaImpresion,
+  type PersonaConCasa,
   type RcImpresion,
   type CasillaImpresion,
 } from "@/lib/rutas-impresion";
@@ -56,7 +56,7 @@ function LineaPersona({
   conPropone,
 }: {
   etiqueta: string;
-  p: (PersonaImpresion & { propone?: string; telefonoPropone?: string | null }) | null;
+  p: PersonaConCasa | null;
   conPropone?: boolean;
 }) {
   if (!p) {
@@ -87,12 +87,22 @@ function LineaPersona({
   );
 }
 
-function RcCasa({ titulo, rc }: { titulo: string; rc: RcImpresion }) {
+/** El RC (propietario/suplente) ya no es por casa: se muestra del lado que
+ * corresponde según en cuál se capturó cada uno (pueden diferir entre sí). */
+function RcCasa({ titulo, rc, casa }: { titulo: string; rc: RcImpresion; casa: "C26" | "C52" }) {
   return (
     <div className="rc-casa">
       <p className="rc-t">{titulo}</p>
-      <LineaPersona etiqueta="Propietario" p={rc.propietario} conPropone />
-      <LineaPersona etiqueta="Suplente" p={rc.suplente} conPropone />
+      <LineaPersona
+        etiqueta="Propietario"
+        p={rc.propietario?.casa === casa ? rc.propietario : null}
+        conPropone
+      />
+      <LineaPersona
+        etiqueta="Suplente"
+        p={rc.suplente?.casa === casa ? rc.suplente : null}
+        conPropone
+      />
     </div>
   );
 }
@@ -116,8 +126,8 @@ function CasillaBloque({ c }: { c: CasillaImpresion }) {
         <b>Ubicación:</b> {c.ubicacion}
       </p>
       <div className="rc-grid">
-        <RcCasa titulo="RC Casa 26" rc={c.rc.C26} />
-        <RcCasa titulo="RC Casa 52" rc={c.rc.C52} />
+        <RcCasa titulo="RC Casa 26" rc={c.rc} casa="C26" />
+        <RcCasa titulo="RC Casa 52" rc={c.rc} casa="C52" />
       </div>
     </div>
   );

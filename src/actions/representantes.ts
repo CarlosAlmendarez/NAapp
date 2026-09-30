@@ -12,12 +12,17 @@ import { ejecutarAccion, AccionError, type ActionResult } from "@/lib/action-res
 
 /**
  * Crea o reemplaza el representante (propietario o suplente) de una
- * casilla EN LA CASA ACTIVA (26 / 52 — ver src/lib/casa.ts). Disponible
- * para Admin general, Admin de casillas y Capturador — siempre que la
- * casilla pertenezca a una localidad del capturador (verificado en
- * obtenerCasillaConAccesoOrThrow, nunca solo en la UI). El Representante
- * General (RG) queda excluido a propósito: solo administra el catálogo de
- * casillas, nunca captura RC.
+ * casilla. Disponible para Admin general, Admin de casillas y Capturador
+ * — siempre que la casilla pertenezca a una localidad del capturador
+ * (verificado en obtenerCasillaConAccesoOrThrow, nunca solo en la UI). El
+ * Representante General (RG) queda excluido a propósito: solo administra
+ * el catálogo de casillas, nunca captura RC.
+ *
+ * El RC ya NO es "por casa": hay un solo propietario y un solo suplente
+ * por casilla, compartidos entre Casa 26 y Casa 52. Se guarda la casa
+ * activa al CREARLO (nunca se toca al editar, igual que
+ * EnlaceCasilla.casa) solo para identificar en cuál se capturó — no
+ * limita en qué casa se puede editar o consultar después.
  *
  * El RC propietario y el suplente se capturan siempre, independientemente
  * de si la casilla ya tiene un RG (enlace de ruta) capturado o no — son
@@ -37,7 +42,7 @@ export async function guardarRepresentante(
     const datos = representanteSchema.parse(formData);
 
     const anterior = await prisma.representanteCasilla.findUnique({
-      where: { casillaId_tipo_casa: { casillaId: casilla.id, tipo: datos.tipo, casa } },
+      where: { casillaId_tipo: { casillaId: casilla.id, tipo: datos.tipo } },
     });
 
     // Alta: la clave de elector es obligatoria. Edición: si viene vacía
@@ -50,7 +55,7 @@ export async function guardarRepresentante(
       : anterior!.claveElectorCifrada;
 
     const representante = await prisma.representanteCasilla.upsert({
-      where: { casillaId_tipo_casa: { casillaId: casilla.id, tipo: datos.tipo, casa } },
+      where: { casillaId_tipo: { casillaId: casilla.id, tipo: datos.tipo } },
       create: {
         casillaId: casilla.id,
         tipo: datos.tipo,
@@ -76,6 +81,8 @@ export async function guardarRepresentante(
         propone: datos.propone,
         telefonoPropone: datos.telefonoPropone,
         updatedById: usuario.id,
+        // `casa` NUNCA se toca en el update: fija en qué casa se capturó
+        // originalmente, igual que EnlaceCasilla.
       },
     });
 
@@ -101,14 +108,11 @@ export async function eliminarRepresentante(
     const { usuario, casilla } = await obtenerCasillaConAccesoOrThrow(casillaId);
     requireRole(usuario, ["ADMIN_GENERAL", "ADMIN_CASILLAS", "CAPTURADOR"]);
 
-    const casa = await obtenerCasaActiva();
-    if (!casa) throw new AccionError("Elige una casa (26 o 52) antes de capturar.");
-
     const actual = await prisma.representanteCasilla.findUnique({
       where: { id: representanteId },
     });
-    if (!actual || actual.casillaId !== casilla.id || actual.casa !== casa) {
-      throw new AccionError("El representante no existe en esta casilla y casa.");
+    if (!actual || actual.casillaId !== casilla.id) {
+      throw new AccionError("El representante no existe en esta casilla.");
     }
 
     await prisma.representanteCasilla.delete({ where: { id: representanteId } });

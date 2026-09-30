@@ -30,9 +30,10 @@ function safeDecrypt(cifrado: string | null | undefined): string {
   }
 }
 
-// Los datos de RC/enlace son por casa (26 / 52): cada exportación trae los
-// de UNA casa (la activa) y agrega "CASA" como última columna para dejarlo
-// explícito. El orden del resto de columnas se conserva igual que el
+// Ni el RC ni el enlace de Rutas son por casa (un solo dato por casilla):
+// la exportación siempre trae el mismo contenido sin importar cuál esté
+// activa; "CASA" al final solo deja constancia de cuál era la activa al
+// exportar. El orden del resto de columnas se conserva igual que el
 // padrón oficial (por eso "CASA" va al final y no al frente). Cada bloque
 // de representante (propietario/suplente) trae también el teléfono de
 // quien lo propone, junto a "Propone" — igual que en la captura.
@@ -161,10 +162,12 @@ export async function construirLibroCasillas(
   casa: Casa,
   filtro: Prisma.CasillaWhereInput = {}
 ): Promise<Buffer> {
+  // El RC (como el RG) ya no es por casa: un solo propietario/suplente por
+  // casilla, sin importar cuál esté activa al exportar.
   const casillas = await prisma.casilla.findMany({
     where: filtro,
     orderBy: [{ municipio: "asc" }, { seccion: "asc" }, { tipoCasilla: "asc" }],
-    include: { representantes: { where: { casa } }, enlace: true },
+    include: { representantes: true, enlace: true },
   });
 
   const numeroCasa = CASA_NUMERO[casa];
@@ -223,12 +226,11 @@ export async function construirLibroRutas(
   casa: Casa,
   filtro: Prisma.CasillaWhereInput = {}
 ): Promise<Buffer> {
-  // El RC es por casa (se filtra); el enlace de Rutas es único por casilla
-  // (no por casa).
+  // Ni el RC ni el enlace de Rutas son por casa: un solo dato por casilla.
   const casillas = await prisma.casilla.findMany({
     where: filtro,
     orderBy: [{ municipio: "asc" }, { seccion: "asc" }, { tipoCasilla: "asc" }],
-    include: { representantes: { where: { casa } }, enlace: true },
+    include: { representantes: true, enlace: true },
   });
   const numeroCasa = CASA_NUMERO[casa];
 

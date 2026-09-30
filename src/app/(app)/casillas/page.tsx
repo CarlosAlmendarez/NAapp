@@ -34,7 +34,7 @@ export default async function CasillasPage({
   const esAdmin = sinRestriccionGeografica(usuario);
 
   const [{ casillas, total, page, totalPages }, municipios, distritos] = await Promise.all([
-    listarCasillas(usuario, casa, {
+    listarCasillas(usuario, {
       municipio: params.municipio,
       distrito: params.distrito,
       busqueda: params.busqueda,

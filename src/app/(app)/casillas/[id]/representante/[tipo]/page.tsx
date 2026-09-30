@@ -1,8 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireUser, tieneAccesoALocalidad } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
-import { requireCasaActiva } from "@/lib/casa-server";
-import { CASA_LABEL } from "@/lib/casa";
 import { casillasPendientesDeRc } from "@/lib/casillas-query";
 import { decryptField } from "@/lib/crypto";
 import { nombreCompleto } from "@/lib/utils";
@@ -15,7 +13,6 @@ export default async function RepresentantePage({
   params: Promise<{ id: string; tipo: string }>;
 }) {
   const usuario = await requireUser();
-  const casa = await requireCasaActiva();
   const { id, tipo: tipoParam } = await params;
 
   const tipoUpper = tipoParam.toUpperCase();
@@ -44,7 +41,7 @@ export default async function RepresentantePage({
     : null;
 
   const existente = await prisma.representanteCasilla.findUnique({
-    where: { casillaId_tipo_casa: { casillaId: id, tipo, casa } },
+    where: { casillaId_tipo: { casillaId: id, tipo } },
   });
 
   // La clave de elector se muestra descifrada en la edición (es sensible
@@ -59,14 +56,13 @@ export default async function RepresentantePage({
   }
 
   // Para encadenar la captura sin volver al listado.
-  const { siguienteId } = await casillasPendientesDeRc(usuario, casa, id);
+  const { siguienteId } = await casillasPendientesDeRc(usuario, id);
 
   return (
     <Card className="mx-auto max-w-2xl">
       <CardHeader>
         <CardTitle>
-          RC {tipo === "PROPIETARIO" ? "propietario" : "suplente"} — Sección {casilla.seccion} ·{" "}
-          {CASA_LABEL[casa]}
+          RC {tipo === "PROPIETARIO" ? "propietario" : "suplente"} — Sección {casilla.seccion}
         </CardTitle>
         {rg && (
           <p className="text-sm text-muted-foreground">
@@ -78,7 +74,6 @@ export default async function RepresentantePage({
         <RepresentanteForm
           casillaId={id}
           tipo={tipo}
-          casaLabel={CASA_LABEL[casa]}
           siguientePendienteId={siguienteId}
           existente={
             existente

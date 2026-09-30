@@ -40,12 +40,10 @@ type PersonaExistente = {
  * casillas libres.
  */
 export function RutaForm({
-  casaLabel,
   rutaId,
   paradasIniciales,
   personaExistente,
 }: {
-  casaLabel: string;
   rutaId?: string;
   paradasIniciales?: ParadaInicial[];
   personaExistente?: PersonaExistente;
@@ -362,7 +360,7 @@ export function RutaForm({
                       <p className="truncate text-xs text-muted-foreground">
                         {parada.municipio} · {parada.distritoLocal} · {parada.coloniaLocalidad}
                       </p>
-                      <RcContexto rc={parada.rc} casaLabel={casaLabel} />
+                      <RcContexto rc={parada.rc} />
                     </div>
                   </div>
                   {guardada ? (
@@ -469,14 +467,14 @@ export function RutaForm({
 
 /**
  * Contexto para el RG que captura la ruta: quién es el RC (propietario y
- * suplente, ambos si están capturados) de esa casilla en la casa activa —
- * un dato aparte e independiente del RG. Nunca muestra clave de elector.
+ * suplente, ambos si están capturados) de esa casilla — un dato aparte e
+ * independiente del RG. Nunca muestra clave de elector.
  */
-function RcContexto({ rc, casaLabel }: { rc: RcResumenCasilla; casaLabel: string }) {
+function RcContexto({ rc }: { rc: RcResumenCasilla }) {
   const sinNada = !rc.propietario && !rc.suplente;
   return (
     <p className="mt-1 text-xs text-muted-foreground">
-      <span className="font-medium text-foreground">RC ({casaLabel}): </span>
+      <span className="font-medium text-foreground">RC: </span>
       {sinNada ? (
         <>Sin representante de casilla capturado</>
       ) : (
