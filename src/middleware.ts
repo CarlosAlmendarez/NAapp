@@ -12,8 +12,9 @@ export const { auth: middleware } = NextAuth(authConfig);
 
 export const config = {
   // Excluye assets estáticos, imágenes, favicon y las rutas de la API de
-  // Auth.js (que maneja su propia lógica de sesión).
-  matcher: ["/((?!api/auth|api/health|_next/static|_next/image|favicon.ico|robots.txt).*)"],
+  // Auth.js (que maneja su propia lógica de sesión) y `_vercel` (script y
+  // envíos de Vercel Analytics, que no deben redirigir a /login).
+  matcher: ["/((?!api/auth|api/health|_vercel|_next/static|_next/image|favicon.ico|robots.txt).*)"],
   // Runtime Node.js (estable desde Next.js 15.5): evita advertencias de
   // compatibilidad de `jose`/Auth.js con el Edge runtime.
   runtime: "nodejs",

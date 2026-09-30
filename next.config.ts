@@ -9,11 +9,15 @@ import type { NextConfig } from "next";
 // el runtime de desarrollo de React/Next los necesita para hidratar. La
 // CSP de producción (`next build` + `next start`, y Vercel) queda idéntica
 // a antes — el equipo solo recupera el `npm run dev`.
+//
+// Vercel Analytics: en producción su script y sus envíos van al mismo
+// dominio (`/_vercel/insights/*`), cubiertos por 'self'. Solo en desarrollo
+// carga un script de depuración desde va.vercel-scripts.com.
 const isDev = process.env.NODE_ENV === "development";
 
 const CSP = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval' https://va.vercel-scripts.com" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
